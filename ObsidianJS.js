@@ -876,7 +876,6 @@ const ObsidianJS = {
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
-	FrontMatter: FrontMatter,
 	Section: Section,
 	Sections: Sections,
 	Tags: Tags,
