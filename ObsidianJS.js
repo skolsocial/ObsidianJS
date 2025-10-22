@@ -1,3 +1,6 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: deep-blue; icon-glyph: magic;
 
 
 // static utility imports *****************************************************
@@ -814,30 +817,43 @@ class CalendarEvent {
 }
 
 class Calendar {
-	constructor(calendarNames = []) {
-		this.calendars =
-			calendarNames.length > 0
-				? this._findCalendarsByName(calendarNames)
-				: CalendarJS.forEvents();
+	// Factory method handles both string and array
+	static async create(calendarNames) {
+		const calendar = new Calendar();
+		await calendar._initializeCalendars(calendarNames);
+		return calendar;
 	}
 
-	_findCalendarsByName(names) {
-		const allCalendars = CalendarJS.forEvents();
+	async _initializeCalendars(calendarNames) {
+		// Handle string, array, or nothing
+		if (!calendarNames) {
+			this.calendars = await CalendarJS.forEvents();
+		} else {
+			// Convert string to array if needed
+			const namesArray = Array.isArray(calendarNames) 
+				? calendarNames 
+				: [calendarNames];
+			this.calendars = await this._findCalendarsByName(namesArray);
+		}
+	}
+
+	async _findCalendarsByName(names) {
+		const allCalendars = await CalendarJS.forEvents();
 		return allCalendars.filter((cal) => names.includes(cal.title));
 	}
 
-	getEventsForDate(date) {
+	async getEventsForDate(date) {
 		const startOfDay = new Date(date);
 		startOfDay.setHours(0, 0, 0, 0);
 
 		const endOfDay = new Date(date);
 		endOfDay.setHours(23, 59, 59, 999);
 
-		return this.getEventsBetween(startOfDay, endOfDay);
+		return await this.getEventsBetween(startOfDay, endOfDay);
 	}
 
-	getEventsBetween(startDate, endDate) {
-		const events = CalendarJS.eventsBetween(
+	async getEventsBetween(startDate, endDate) {
+		const events = await CalendarJS.eventsBetween(
 			startDate,
 			endDate,
 			this.calendars
@@ -845,27 +861,27 @@ class Calendar {
 		return events.map((event) => new CalendarEvent(event));
 	}
 
-	getById(id) {
-		const event = CalendarJS.forEventWithIdentifier(id, this.calendars);
+	async getById(id) {
+		const event = await CalendarJS.forEventWithIdentifier(id, this.calendars);
 		return event ? new CalendarEvent(event) : null;
 	}
 
-	getTodaysEvents() {
-		return this.getEventsForDate(new Date());
+	async getTodaysEvents() {
+		return await this.getEventsForDate(new Date());
 	}
 
-	getMajorEvents(startDate, endDate, predicateFn) {
-		const events = this.getEventsBetween(startDate, endDate);
+	async getMajorEvents(startDate, endDate, predicateFn) {
+		const events = await this.getEventsBetween(startDate, endDate);
 		return events.filter((event) => event.isMajorEvent(predicateFn));
 	}
 
-	getMajorEventsForDate(date, predicateFn) {
-		const events = this.getEventsForDate(date);
+	async getMajorEventsForDate(date, predicateFn) {
+		const events = await this.getEventsForDate(date);
 		return events.filter((event) => event.isMajorEvent(predicateFn));
 	}
 
 	getCalendarNames() {
-		return this.calendars.map((cal) => cal.title);
+		return this.calendars ? this.calendars.map((cal) => cal.title) : [];
 	}
 }
 
