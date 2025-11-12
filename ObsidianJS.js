@@ -902,7 +902,7 @@ class Calendar {
 	getCalendarNames() {
 		return this.calendars ? this.calendars.map((cal) => cal.title) : [];
 	}
-
+}
 // Namespace and export *******************************************************
 const ObsidianJS = {
 	Calendar: Calendar,
