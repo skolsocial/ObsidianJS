@@ -816,6 +816,7 @@ class CalendarEvent {
 	}
 }
 
+// Calendar class to handle iOS Calendar access
 class Calendar {
 	// Factory method handles both string and array
 	static async create(calendarNames) {
@@ -843,31 +844,49 @@ class Calendar {
 	}
 
 	async getEventsForDate(date) {
-		const startOfDay = new Date(date);
-		startOfDay.setHours(0, 0, 0, 0);
+		const startOfDay = DateFormatter.getStartOfDay(date);
+		const endOfDay = DateFormatter.getEndOfDay(date);
 
-		const endOfDay = new Date(date);
-		endOfDay.setHours(23, 59, 59, 999);
-
-		return await this.getEventsBetween(startOfDay, endOfDay);
+		// Use the native Scriptable methods for date ranges
+		const events = await CalendarJS.between(startOfDay, endOfDay, this.calendars);
+		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getEventsBetween(startDate, endDate) {
-		const events = await CalendarJS.eventsBetween(
-			startDate,
-			endDate,
-			this.calendars
-		);
+		// The correct Scriptable method is Calendar.between()
+		const events = await CalendarJS.between(startDate, endDate, this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getById(id) {
-		const event = await CalendarJS.forEventWithIdentifier(id, this.calendars);
-		return event ? new CalendarEvent(event) : null;
+		// This method doesn't exist in Scriptable - would need to fetch and filter
+		const allEvents = await this.getTodaysEvents();
+		const event = allEvents.find(e => e.id === id);
+		return event || null;
 	}
 
 	async getTodaysEvents() {
-		return await this.getEventsForDate(new Date());
+		// Use the native eventsToday method
+		const events = await CalendarJS.today(this.calendars);
+		return events.map((event) => new CalendarEvent(event));
+	}
+
+	async getTomorrowsEvents() {
+		// Use the native eventsTomorrow method
+		const events = await CalendarJS.tomorrow(this.calendars);
+		return events.map((event) => new CalendarEvent(event));
+	}
+
+	async getThisWeeksEvents() {
+		// Use the native eventsThisWeek method
+		const events = await CalendarJS.thisWeek(this.calendars);
+		return events.map((event) => new CalendarEvent(event));
+	}
+
+	async getNextWeeksEvents() {
+		// Use the native eventsNextWeek method
+		const events = await CalendarJS.nextWeek(this.calendars);
+		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getMajorEvents(startDate, endDate, predicateFn) {
@@ -883,7 +902,6 @@ class Calendar {
 	getCalendarNames() {
 		return this.calendars ? this.calendars.map((cal) => cal.title) : [];
 	}
-}
 
 // Namespace and export *******************************************************
 const ObsidianJS = {
