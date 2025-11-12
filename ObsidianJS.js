@@ -816,7 +816,7 @@ class CalendarEvent {
 	}
 }
 
-// Calendar class to handle iOS Calendar access
+/ Calendar class to handle iOS Calendar access
 class Calendar {
 	// Factory method handles both string and array
 	static async create(calendarNames) {
@@ -847,45 +847,57 @@ class Calendar {
 		const startOfDay = DateFormatter.getStartOfDay(date);
 		const endOfDay = DateFormatter.getEndOfDay(date);
 
-		// Use the native Scriptable methods for date ranges
-		const events = await CalendarJS.between(startOfDay, endOfDay, this.calendars);
+		// CalendarEvent.between() is the correct method
+		const events = await CalendarEvent.between(startOfDay, endOfDay, this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getEventsBetween(startDate, endDate) {
-		// The correct Scriptable method is Calendar.between()
-		const events = await CalendarJS.between(startDate, endDate, this.calendars);
+		// CalendarEvent.between() is the correct method
+		const events = await CalendarEvent.between(startDate, endDate, this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getById(id) {
-		// This method doesn't exist in Scriptable - would need to fetch and filter
+		// Fetch today's events and search for matching ID
 		const allEvents = await this.getTodaysEvents();
 		const event = allEvents.find(e => e.id === id);
 		return event || null;
 	}
 
 	async getTodaysEvents() {
-		// Use the native eventsToday method
-		const events = await CalendarJS.today(this.calendars);
+		// CalendarEvent.today() is the correct method
+		const events = await CalendarEvent.today(this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getTomorrowsEvents() {
-		// Use the native eventsTomorrow method
-		const events = await CalendarJS.tomorrow(this.calendars);
+		// CalendarEvent.tomorrow() is the correct method
+		const events = await CalendarEvent.tomorrow(this.calendars);
+		return events.map((event) => new CalendarEvent(event));
+	}
+
+	async getYesterdaysEvents() {
+		// CalendarEvent.yesterday() is the correct method
+		const events = await CalendarEvent.yesterday(this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getThisWeeksEvents() {
-		// Use the native eventsThisWeek method
-		const events = await CalendarJS.thisWeek(this.calendars);
+		// CalendarEvent.thisWeek() is the correct method
+		const events = await CalendarEvent.thisWeek(this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
 	async getNextWeeksEvents() {
-		// Use the native eventsNextWeek method
-		const events = await CalendarJS.nextWeek(this.calendars);
+		// CalendarEvent.nextWeek() is the correct method
+		const events = await CalendarEvent.nextWeek(this.calendars);
+		return events.map((event) => new CalendarEvent(event));
+	}
+
+	async getLastWeeksEvents() {
+		// CalendarEvent.lastWeek() is the correct method
+		const events = await CalendarEvent.lastWeek(this.calendars);
 		return events.map((event) => new CalendarEvent(event));
 	}
 
