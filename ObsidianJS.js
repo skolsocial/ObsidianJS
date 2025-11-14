@@ -773,9 +773,8 @@ class ObsidianNote extends ObsidianFile {
 	}
 }
 
-// Calendar class to handle iOS Calendar access
-// CalendarEvent class
-class CalendarEvent {
+// ObsidianCalendarEvent - wraps the native Scriptable CalendarEvent
+class ObsidianCalendarEvent {
 	constructor(nativeEvent) {
 		this.nativeEvent = nativeEvent;
 		this.title = nativeEvent.title;
@@ -785,7 +784,7 @@ class CalendarEvent {
 		this.location = nativeEvent.location || ObsidianFile.nullstring;
 		this.notes = nativeEvent.notes || ObsidianFile.nullstring;
 		this.calendarName = nativeEvent.calendar.title;
-		this.id = nativeEvent.identifier; // Changed to 'id' for consistency
+		this.id = nativeEvent.identifier;
 		this.attendees = nativeEvent.attendees || [];
 	}
 
@@ -816,11 +815,11 @@ class CalendarEvent {
 	}
 }
 
-/ Calendar class to handle iOS Calendar access
-class Calendar {
+// ObsidianCalendar - manages calendar access with wrapped events
+class ObsidianCalendar {
 	// Factory method handles both string and array
 	static async create(calendarNames) {
-		const calendar = new Calendar();
+		const calendar = new ObsidianCalendar();
 		await calendar._initializeCalendars(calendarNames);
 		return calendar;
 	}
@@ -847,15 +846,15 @@ class Calendar {
 		const startOfDay = DateFormatter.getStartOfDay(date);
 		const endOfDay = DateFormatter.getEndOfDay(date);
 
-		// CalendarEvent.between() is the correct method
+		// Use native CalendarEvent.between()
 		const events = await CalendarEvent.between(startOfDay, endOfDay, this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getEventsBetween(startDate, endDate) {
-		// CalendarEvent.between() is the correct method
+		// Use native CalendarEvent.between()
 		const events = await CalendarEvent.between(startDate, endDate, this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getById(id) {
@@ -866,39 +865,39 @@ class Calendar {
 	}
 
 	async getTodaysEvents() {
-		// CalendarEvent.today() is the correct method
+		// Use native CalendarEvent.today()
 		const events = await CalendarEvent.today(this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getTomorrowsEvents() {
-		// CalendarEvent.tomorrow() is the correct method
+		// Use native CalendarEvent.tomorrow()
 		const events = await CalendarEvent.tomorrow(this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getYesterdaysEvents() {
-		// CalendarEvent.yesterday() is the correct method
+		// Use native CalendarEvent.yesterday()
 		const events = await CalendarEvent.yesterday(this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getThisWeeksEvents() {
-		// CalendarEvent.thisWeek() is the correct method
+		// Use native CalendarEvent.thisWeek()
 		const events = await CalendarEvent.thisWeek(this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getNextWeeksEvents() {
-		// CalendarEvent.nextWeek() is the correct method
+		// Use native CalendarEvent.nextWeek()
 		const events = await CalendarEvent.nextWeek(this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getLastWeeksEvents() {
-		// CalendarEvent.lastWeek() is the correct method
+		// Use native CalendarEvent.lastWeek()
 		const events = await CalendarEvent.lastWeek(this.calendars);
-		return events.map((event) => new CalendarEvent(event));
+		return events.map((event) => new ObsidianCalendarEvent(event));
 	}
 
 	async getMajorEvents(startDate, endDate, predicateFn) {
@@ -915,6 +914,7 @@ class Calendar {
 		return this.calendars ? this.calendars.map((cal) => cal.title) : [];
 	}
 }
+
 // Namespace and export *******************************************************
 const ObsidianJS = {
 	Calendar: Calendar,
