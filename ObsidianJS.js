@@ -917,8 +917,8 @@ class ObsidianCalendar {
 
 // Namespace and export *******************************************************
 const ObsidianJS = {
-	Calendar: Calendar,
-	CalendarEvent: CalendarEvent,
+	Calendar: ObsidianCalendar,
+	CalendarEvent: ObsidianCalendarEvent,
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
