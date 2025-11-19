@@ -814,7 +814,23 @@ class ObsidianCalendarEvent {
 		return this.attendees.filter((a) => !a.isCurrentUser);
 	}
 	
-	toDayPlannerString() {
+	// generate a consistant hash for deduplication
+	getEventHash() {
+	
+		const startISO = this.startDate.toISOString();
+		const endISO = this.endDate.toISOString();
+		const hashString = `${this.title}|${startISO}|${endISO}`;
+		
+		let hash = 0;
+		for (let i = 0; i < hashString.length; i++) {
+			const char = hashString.charCodeAt(i);
+			hash = ((hash << 5) - hash) + char;
+			hash = hash & hash;
+		}	
+		return hash.toString();
+	}
+	
+	toDayPlannerString(newLines = 2) {
 		let result = '';
     
     // Time and title
@@ -836,7 +852,7 @@ class ObsidianCalendarEvent {
       result += `${ObsidianFile.newline} - Notes ${this.notes.trim()}`;
     }
     
-    return result;
+    return result + (ObsidianFile.newline * newLines);
     
 	}
 }
