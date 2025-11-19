@@ -830,31 +830,33 @@ class ObsidianCalendarEvent {
 		return hash.toString();
 	}
 	
-	toDayPlannerString(newLines = 2) {
-		let result = '';
+toDayPlannerString(newLines = 2) {
+    let result = '';
     
     // Time and title
-		if (this.isAllDay) {
-      result = `${ObsidianTask.checkbox} ${this.title} (All Day)`;
-      } else {
+    if (this.isAllDay) {
+        result = `${ObsidianTask.checkbox} ${this.title} (All Day)`;
+    } else {
         const startTime = DateFormatter.toTime24Hour(this.startDate);
         const endTime = DateFormatter.toTime24Hour(this.endDate);
         result = `${ObsidianTask.checkbox} ${startTime} - ${endTime} ${this.title}`;
-      }
-    // add attendees if they exist
+    }
+    
+    // Add attendees if they exist
     if (this.hasAttendees()) {
-    		const attendeeNames = this.getAttendeeNames();
-      result +=  `{ObsidianFile.newline} - Attendees: ${attendeeNames.join(', ')}`;
+        const attendeeNames = this.getAttendeeNames();
+        result += `${ObsidianFile.newline}  - Attendees: ${attendeeNames.join(', ')}`;
     }
     
     // Add notes if they exist
     if (this.notes && this.notes.trim()) {
-      result += `${ObsidianFile.newline} - Notes ${this.notes.trim()}`;
+        result += `${ObsidianFile.newline}  - Notes: ${this.notes.trim()}`;
     }
     
-    return result + (ObsidianFile.newline * newLines);
-    
+    // Add multiple newlines
+    return result + ObsidianFile.newline.repeat(newLines);
 	}
+
 }
 
 // ObsidianCalendar - manages calendar access with wrapped events
