@@ -1048,7 +1048,7 @@ class ObsidianLocation {
 			zoom: ${zoom}
 			\`\`\``;
 	}
-
+}
 class ObsidianController {
     // ... existing methods ...
     // 1. Journal entry with location link
