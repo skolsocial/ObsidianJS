@@ -317,9 +317,8 @@ class FrontMatter {
 
 		for (const [key, value] of Object.entries(this.data)) {
 			if (Array.isArray(value)) {
-				lines.push(
-					`${key}: [${value.map((v) => `"${v}"`).join(", ")}]`
-				);
+				const quotedValues = value.map((v) => `"${v}"`).join(", ");
+				lines.push(`${key}: [${quotedValues}]`);
 			} else if (typeof value === "string") {
 				lines.push(`${key}: "${value}"`);
 			} else {
