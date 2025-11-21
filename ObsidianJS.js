@@ -5,6 +5,7 @@
 
 // static utility imports *****************************************************
 const CalendarJS = globalThis.Calendar;
+const ScriptableLocation = globalThis.Location;
 
 // Utility classes ************************************************************
 // DateFormatter class for consistent date/time formatting
@@ -719,6 +720,27 @@ class ObsidianNote extends ObsidianFile {
 		return new Sections(this._sections, this);
 	}
 
+	// add location functionality to Obidian note
+    async addLocationToFrontmatter(key = 'location') {
+        const location = await ObsidianLocation.getCurrent();
+        const coords = ObsidianLocation.toCoordinatesString(location);
+        this.setFrontMatterProperty(key, coords);
+        return location;
+    }
+    
+    async appendToLocationsHistory() {
+        const location = await ObsidianLocation.getCurrent();
+        const coords = ObsidianLocation.toCoordinatesString(location);
+        const timestamp = DateFormatter.toISO(new Date()) + ' ' + DateFormatter.toTime24Hour(new Date());
+        
+        // Get existing locations array
+        const locations = this.frontMatter.get('locations') || [];
+        locations.push(`${timestamp}: ${coords}`);
+        
+        this.setFrontMatterProperty('locations', locations);
+        return location;
+    }
+
 	// Save changes back to file
 	save() {
 		this.parse(); // Ensure we're parsed
@@ -958,13 +980,164 @@ class ObsidianCalendar {
 		return this.calendars ? this.calendars.map((cal) => cal.title) : [];
 	}
 }
+class ObsidianLocation {
+    // Get current location with specified accuracy
+    static async getCurrent(accuracy = 'kilometer') {
+        const accuracyMethods = {
+            'best': ScriptableLocation.setAccuracyToBest,
+            'tenMeters': ScriptableLocation.setAccuracyToTenMeters,
+            'hundredMeters': ScriptableLocation.setAccuracyToHundredMeters,
+            'kilometer': ScriptableLocation.setAccuracyToKilometer,
+            'threeKilometers': ScriptableLocation.setAccuracyToThreeKilometers
+        };
+        
+        if (accuracyMethods[accuracy]) {
+            accuracyMethods[accuracy]();
+        }
+        
+        const loc = await ScriptableLocation.current();
+        return {
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            altitude: loc.altitude,
+            timestamp: new Date()
+        };
+    }
+    
+    // Get address from coordinates
+    static async reverseGeocode(latitude, longitude) {
+        const results = await ScriptableLocation.reverseGeocode(latitude, longitude);
+        if (results && results.length > 0) {
+            const place = results[0];
+            return {
+                street: place.thoroughfare || '',
+                city: place.locality || '',
+                state: place.administrativeArea || '',
+                country: place.country || '',
+                postalCode: place.postalCode || '',
+                formattedAddress: ObsidianLocation.formatAddress(place)
+            };
+        }
+        return null;
+    }
+    
+    static formatAddress(place) {
+        const parts = [];
+        if (place.thoroughfare) parts.push(place.thoroughfare);
+        if (place.locality) parts.push(place.locality);
+        if (place.administrativeArea) parts.push(place.administrativeArea);
+        return parts.join(', ');
+    }
+    
+    // Format as coordinates string
+    static toCoordinatesString(location) {
+        return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+    }
+    
+    // Format as Obsidian map link
+    static toMapLink(location, label = 'Map') {
+        const coords = ObsidianLocation.toCoordinatesString(location);
+        return `[${label}](geo:${location.latitude},${location.longitude})`;
+    }
+    
+    // Format as embedded map (using Obsidian Leaflet plugin syntax)
+    static toEmbeddedMap(location, zoom = 15) {
+        return `\`\`\`leaflet
+			id: map-${Date.now()}
+			lat: ${location.latitude}
+			long: ${location.longitude}
+			zoom: ${zoom}
+			\`\`\``;
+	}
 
+class ObsidianController {
+    // ... existing methods ...
+    // 1. Journal entry with location link
+    static async addJournalEntryWithLocation(params) {
+        const { entry, date = new Date() } = params;
+        
+        const location = await ObsidianLocation.getCurrent();
+        const mapLink = ObsidianLocation.toMapLink(location, '📍');
+        const filename = `${DateFormatter.toISO(date)}.md`;
+        const note = new ObsidianNote({
+            folder: "Daily Notes",
+            filename: filename
+        });
+        
+        let section = note.sections.find("Journal");
+        if (!section) {
+            section = note.sections.add("Journal", "", 2);
+        }
+        
+        section.append(`- ${entry} ${mapLink}`);
+        await note.appendToLocationsHistory();
+        note.save();
+        return { success: true, location: ObsidianLocation.toCoordinatesString(location) };
+    }
+    
+    // 2. Map journal entry (embedded map + text)
+    static async addMapJournalEntry(params) {
+        const { entry, locationName, date = new Date(), zoom = 15 } = params;
+        const location = await ObsidianLocation.getCurrent();
+        const address = await ObsidianLocation.reverseGeocode(location.latitude, location.longitude);
+        const embeddedMap = ObsidianLocation.toEmbeddedMap(location, zoom);
+        const displayName = locationName || address?.city || 'Current Location';
+        const filename = `${DateFormatter.toISO(date)}.md`;
+        const note = new ObsidianNote({
+            folder: "Daily Notes",
+            filename: filename
+        });
+        
+        let section = note.sections.find("Journal");
+        if (!section) {
+            section = note.sections.add("Journal", "", 2);
+        }
+        
+        const content = `### ${displayName}${ObsidianFile.newline}${embeddedMap}${ObsidianFile.newline}${entry}`;
+        section.append(content);
+        await note.appendToLocationsHistory();
+        note.save();
+        return { success: true, location: displayName };
+    }
+    
+    // 3. Create new map note
+    static async createMapNote(params) {
+        const { title, content = '', folder = 'Maps', zoom = 15 } = params;
+        const location = await ObsidianLocation.getCurrent();
+        const address = await ObsidianLocation.reverseGeocode(location.latitude, location.longitude);
+        const coords = ObsidianLocation.toCoordinatesString(location);
+        const embeddedMap = ObsidianLocation.toEmbeddedMap(location, zoom);
+        const filename = `${title || address?.formattedAddress || 'Location'}.md`;
+        const note = new ObsidianNote({
+            folder: folder,
+            filename: filename
+        });
+        
+        // Set frontmatter
+        await note.addLocationToFrontmatter('location');
+        note.setFrontMatterProperty('created', DateFormatter.toISO(new Date()) + ' ' + DateFormatter.toTime24Hour(new Date()));
+        if (address) {
+            note.setFrontMatterProperty('address', address.formattedAddress);
+        }
+        
+        // Add map section
+        const mapSection = note.sections.add(title || 'Location', embeddedMap, 1);
+        if (content) {
+            mapSection.append(ObsidianFile.newline + content);
+        }
+        note.save();       
+        return { success: true, filename: filename, coordinates: coords };
+    }
+}
 // Namespace and export *******************************************************
 const ObsidianJS = {
 	Calendar: ObsidianCalendar,
 	CalendarEvent: ObsidianCalendarEvent,
+	DateFormatter: DateFormatter,
+	execute: ObsidianController.execute.bind(ObsidianController),
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
+	Location: ObsidianLocation,
 	Note: ObsidianNote,
 	Section: Section,
 	Sections: Sections,
