@@ -1130,10 +1130,10 @@ class ObsidianController {
 }
 // Namespace and export *******************************************************
 const ObsidianJS = {
+	// execute: ObsidianController.execute.bind(ObsidianController),
 	Calendar: ObsidianCalendar,
 	CalendarEvent: ObsidianCalendarEvent,
 	DateFormatter: DateFormatter,
-	execute: ObsidianController.execute.bind(ObsidianController),
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Location: ObsidianLocation,
