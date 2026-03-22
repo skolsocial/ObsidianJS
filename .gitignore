@@ -3,6 +3,7 @@
 
 # Except ObsidianJS
 !ObsidianJS.js
+!DailyNoteEntry.js
 !.gitignore
 !README.md
 !LICENSE
