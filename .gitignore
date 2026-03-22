@@ -1,0 +1,8 @@
+# ignore everything
+*
+
+# Except ObsidianJS
+!ObsidianJS.js
+!.gitignore
+!README.md
+!LICENSE
