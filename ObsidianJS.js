@@ -2,6 +2,11 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: deep-blue; icon-glyph: magic;
 
+// Config *********************************************************************
+const ObsidianConfig = {
+  dailyNotesFilder: "Daily Notes",
+  bookmark: "obsidian_vault"
+};
 
 // static utility imports *****************************************************
 const CalendarJS = globalThis.Calendar;
@@ -13,7 +18,7 @@ class DateFormatter {
 	// Parse a date string or return Date object as-is 
   static parseDate(input) { 
 	if (!input) return null; 
-	if (input instanceof Date) return input; 
+	if (typeof input === 'object' && typeof input.getFullYear === 'function') return input; 
 	if (typeof input === 'string') return new Date(input); 
 	return null; 
   }
@@ -713,6 +718,22 @@ class ObsidianNote extends ObsidianFile {
 		return this;
 	}
 
+	append(content) {
+      this.parse();
+      const lastSection = this._sections[this._sections.length - 1];
+      if (lastSection) {
+        lastSection.append(content);
+    		} else {
+      		this._sections.push(new Section({
+        		header: ObsidianFile.nullstring,
+        		content: content,
+        		level: 0,
+        		parent: this
+      		}));
+      }
+      this._markDirty();
+    }
+
 	// Get all sections
 	get sections() {
 		this.parse();
@@ -771,6 +792,33 @@ class ObsidianNote extends ObsidianFile {
 			.map((section) => section.toString())
 			.join(ObsidianFile.newline);
 	}
+}
+
+class Entry {
+  constructor({text = '', location = null} = {}) {
+    this.text = text;
+    this.location = location;
+  }
+}
+
+class DailyNote extends ObsidianNote {
+  constructor({ folder = ObsidianConfig.dailyNotesFolder, bookmark = ObsidianConfig.bookmark } = {}) {
+    super({bookmark, folder, filename: DateFormatter.toFileName(new Date()) + ".md"});
+    if (!this.exists()) {
+      this.setFrontMatter({
+        created: DateFormatter.toISO(new Date()),
+        tags: ["daily-notes"],
+        location: '',
+        locations: null,
+        type: "note"
+      });
+    }
+  }
+  
+  addEntry(entry) {
+    this.sections.add(DateFormatter.toTime12Hour(new Date()), entry.text, 4);
+  }
+  
 }
 
 // ObsidianCalendarEvent - wraps the native Scriptable CalendarEvent
@@ -919,6 +967,10 @@ class ObsidianCalendar {
 const ObsidianJS = {
 	Calendar: ObsidianCalendar,
 	CalendarEvent: ObsidianCalendarEvent,
+  Config: ObsidianConfig,
+  DateFormatter: DateFormatter,
+  DailyNote: DailyNote,
+  Entry: Entry,
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
