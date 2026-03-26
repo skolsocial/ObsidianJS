@@ -794,22 +794,62 @@ class ObsidianNote extends ObsidianFile {
 	}
 }
 
+class EntryLocation {
+  constructor({latitude = '', longitude = '', 
+		name = '', street = ''} = {}) {
+      this.latitude = latitude;
+      this.longitude = longitude;
+      this.name = name;
+      this.street = street;
+    }
+    
+    get hasLocation() {
+      return this.latitude && this.longitude;
+    }
+    
+    get label() {
+      if (this.name && this.street) return `${this.name}, ${this.street}`;
+      if (this.name) return this.name;
+      if (this.street) return this.street;
+      return '📍';
+    }
+    
+    get link() {
+      return `[${this.label}](geo:${this.latitude},${this.longitude})`;
+    }
+    
+}
+
 class Entry {
-  constructor({text = '', location = null} = {}) {
+  constructor({level = 3, text = '', showTime = true, location = null} = {}) {
+    this.level = level;
     this.text = text;
+    this.showTime = showTime;
     this.location = location;
   }
+  
+  get header() {
+    return this.showTime ? DateFormatter.toTime12Hour(new Date()) : '';
+  }
+  
+  get body() {
+    const parts = [this.text];
+    if (this.location && this.location.hasLocation) {
+      parts.push(this.location.link);
+    }
+    return parts.join(ObsidianFile.newline)
+  }
+  
 }
 
 class DailyNote extends ObsidianNote {
-  constructor({ folder = ObsidianConfig.dailyNotesFolder, bookmark = ObsidianConfig.bookmark } = {}) {
+  constructor({ folder = ObsidianConfig.dailyNotesFolder, bookmark = ObsidianConfig.bookmark, location = null} = {}) {
     super({bookmark, folder, filename: DateFormatter.toFileName(new Date()) + ".md"});
     if (!this.exists()) {
       this.setFrontMatter({
         created: DateFormatter.toISO(new Date()),
         tags: ["daily-notes"],
-        location: '',
-        locations: null,
+        location: location && location.hasLocation ? `${location.latitude},${location.longitude}`: '',
         type: "note"
       });
     }
@@ -967,10 +1007,10 @@ class ObsidianCalendar {
 const ObsidianJS = {
 	Calendar: ObsidianCalendar,
 	CalendarEvent: ObsidianCalendarEvent,
-  Config: ObsidianConfig,
-  DateFormatter: DateFormatter,
-  DailyNote: DailyNote,
-  Entry: Entry,
+	Config: ObsidianConfig,
+	DateFormatter: DateFormatter,
+	DailyNote: DailyNote,
+	Entry: Entry,
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,

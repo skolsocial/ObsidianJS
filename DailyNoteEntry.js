@@ -10,5 +10,7 @@ if (!note.exists()) {
   note.setFrontMatter({ created: ojs.DateFormatter.toISO(new Date()), tags: ["daily-notes"], location: "", locations: null, type: "note" });
 }
 
-note.append("\n#### " + ojs.DateFormatter.toTime24Hour(new Date()) + "\n\n" + params.text);
+note.append("\n#### " + ojs.DateFormatter.toTime24Hour(new Date()) + "\n" + params.text);
 note.save();
+Script.setShortcutOutput("OK");
+Script.complete();
