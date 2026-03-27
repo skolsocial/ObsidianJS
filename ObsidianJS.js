@@ -795,12 +795,11 @@ class ObsidianNote extends ObsidianFile {
 }
 
 class EntryLocation {
-  constructor({latitude = '', longitude = '', 
-		name = '', street = ''} = {}) {
-      this.latitude = latitude;
-      this.longitude = longitude;
-      this.name = name;
-      this.street = street;
+  constructor(locationDict = {}) {
+      this.latitude = locationDict.latitude || '';
+      this.longitude = locationDict.longitude || '';
+      this.name = locationDict.name || '';
+      this.street = locationDict.street | '';
     }
     
     get hasLocation() {
@@ -1011,6 +1010,7 @@ const ObsidianJS = {
 	DateFormatter: DateFormatter,
 	DailyNote: DailyNote,
 	Entry: Entry,
+  EntryLocation: EntryLocation,
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,

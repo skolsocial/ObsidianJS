@@ -2,8 +2,20 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: red; icon-glyph: magic;
 const ojs = importModule("ObsidianJS");
-const params = args.shortcutParameter || { text: "Test entry" };
+const params = args.shortcutParameter || { 
+  text: "Blank entry",
+  latitude: '',
+  longitude: '',
+  name: '',
+  street: ''
+	};
 
+const location = new ojs.EntryLocation(
+  { latitude: params.location.latitude, 
+    longitude: params.location.longitude,
+    name: params.location.name,
+    street: params.location.street
+  });
 const note = new ojs.Note({ folder: "Daily Notes", filename: ojs.DateFormatter.toFilename(new Date()) + ".md" });
 
 if (!note.exists()) {
