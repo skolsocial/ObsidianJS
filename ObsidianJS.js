@@ -842,9 +842,13 @@ class Entry {
 }
 
 class DailyNote extends ObsidianNote {
-  constructor({ folder = ObsidianConfig.dailyNotesFolder, bookmark = ObsidianConfig.bookmark, location = null} = {}) {
-    super({bookmark, folder, filename: DateFormatter.toFileName(new Date()) + ".md"});
+  constructor(params = {}) {
+    const config = params.config;
+    const folder = config.dailyNotesFolder;
+    const bookmark = config.bookmark;
+    super({bookmark, folder, filename: DateFormatter.toFilename(new Date()) + ".md"});
     if (!this.exists()) {
+      const location = params.location ? new EntryLocation(params.location) : null;
       this.setFrontMatter({
         created: DateFormatter.toISO(new Date()),
         tags: ["daily-notes"],
@@ -852,10 +856,13 @@ class DailyNote extends ObsidianNote {
         type: "note"
       });
     }
+    if (params.log) this.addLog(params.log, params.location);
   }
   
-  addEntry(entry) {
-    this.sections.add(DateFormatter.toTime12Hour(new Date()), entry.text, 4);
+  addLog(log = {}, locationData = null) {
+    const location = locationData ? new EntryLocation(locationData) : null;
+    const entry = new Entry({text: log.text, location});
+    this.sections.add(entry.header, entry.body, entry.level);
   }
   
 }
