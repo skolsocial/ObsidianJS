@@ -4,7 +4,7 @@
 
 // Config *********************************************************************
 const ObsidianConfig = {
-  dailyNotesFilder: "Daily Notes",
+  dailyNotesFolder: "Daily Notes",
   bookmark: "obsidian_vault"
 };
 
@@ -795,11 +795,21 @@ class ObsidianNote extends ObsidianFile {
 }
 
 class EntryLocation {
-  constructor(locationDict = {}) {
-      this.latitude = locationDict.latitude || '';
-      this.longitude = locationDict.longitude || '';
-      this.name = locationDict.name || '';
-      this.street = locationDict.street | '';
+    constructor(locationDict = {}) {
+  		    this.latitude = locationDict.latitude || '';
+  		    this.longitude = locationDict.longitude || '';
+  		    this.altitude = locationDict.altitude || '';
+  		    this.poi = locationDict.poi || '';
+  		    this.name = locationDict.name || '';
+  		    this.street = locationDict.street || '';
+  		    this.neighborhood = locationDict.neighborhood || '';
+  		    this.city = locationDict.city || '';
+  		    this.county = locationDict.county || '';
+  		    this.state = locationDict.state || '';
+  		    this.country = locationDict.country || '';
+  		    this.zip = locationDict.zip || '';
+  		    this.timezone = locationDict.timezone || '';
+        this.isoCountry = locationDict.isoCountry || '';
     }
     
     get hasLocation() {
@@ -807,64 +817,94 @@ class EntryLocation {
     }
     
     get label() {
-      if (this.name && this.street) return `${this.name}, ${this.street}`;
-      if (this.name) return this.name;
-      if (this.street) return this.street;
-      return '📍';
+        if (this.poi) return this.poi;
+        if (this.neighborhood && this.city) return `${this.neighborhood}, ${this.city}`;
+        if (this.street) return this.street;
+        if (this.city) return this.city;
+        return `${this.latitude}, ${this.longitude}`;
     }
     
-    get link() {
+    get appleUrl() {
+      const applemaps = 'https://maps.apple.com/?ll=';
+      const latlong = `${this.latitude},${this.longitude}`;
+      const query = `${encodeURIComponent(this.label)}`;
+      const url = `${applemaps}${latlong}&q=${query}`;
+      return `[${this.label}](${url})`;
+    }
+    
+    get mapViewUrl() {
       return `[${this.label}](geo:${this.latitude},${this.longitude})`;
     }
     
+    static async current() {
+      const loc = await Location.current();
+      const geo = await Location.reverseGeocode(
+        loc.latitude, loc.longitude)
+      const place = geo[0] || {};
+      return new EntryLocation({
+  				latitude: loc.latitude,
+  				longitude: loc.longitude,
+  				altitude: loc.altitude,
+  				poi: (place.areasOfInterest && place.areasOfInterest.length) ? 
+          place.areasOfInterest[0] : '',
+  				name: place.name || '',
+  				street: place.thoroughfare ? `${place.subThoroughfare || ''} ${place.thoroughfare}`.trim() : '',
+  				city: place.locality || '',
+  				neighborhood: place.subLocality || '',
+  				state: place.postalAddress.state || 
+          place.administrativeArea || '',
+  				county: place.subAdministrativeArea || '',
+  				country: place.country || '',
+  				zip: place.postalCode || '',
+  				timezone: place.timeZone || '',
+  				isoCountry: place.isoCountryCode || ''
+			});
+    }
 }
 
 class Entry {
-  constructor({level = 3, text = '', showTime = true, location = null} = {}) {
+  constructor({level = 4, header = '', body = ''} = {}) {
     this.level = level;
-    this.text = text;
-    this.showTime = showTime;
-    this.location = location;
+    this.header = header;
+    this.body = body;
   }
-  
-  get header() {
-    return this.showTime ? DateFormatter.toTime12Hour(new Date()) : '';
-  }
-  
-  get body() {
-    const parts = [this.text];
-    if (this.location && this.location.hasLocation) {
-      parts.push(this.location.link);
-    }
-    return parts.join(ObsidianFile.newline)
-  }
-  
 }
 
+
 class DailyNote extends ObsidianNote {
+
   constructor(params = {}) {
     const config = params.config;
     const folder = config.dailyNotesFolder;
     const bookmark = config.bookmark;
-    super({bookmark, folder, filename: DateFormatter.toFilename(new Date()) + ".md"});
+    super({ bookmark, folder, filename: DateFormatter.toFilename(new Date()) + ".md" });
+    this._params = params;
+  }
+
+  async init() {
+    const location = await EntryLocation.current();
     if (!this.exists()) {
-      const location = params.location ? new EntryLocation(params.location) : null;
       this.setFrontMatter({
         created: DateFormatter.toISO(new Date()),
         tags: ["daily-notes"],
-        location: location && location.hasLocation ? `${location.latitude},${location.longitude}`: '',
+        location: location.hasLocation ? `${location.latitude},${location.longitude}` : '',
         type: "note"
       });
     }
-    if (params.log) this.addLog(params.log, params.location);
+    if (this._params.log) this.addLog(this._params.log, location);
+    return this;
   }
-  
-  addLog(log = {}, locationData = null) {
-    const location = locationData ? new EntryLocation(locationData) : null;
-    const entry = new Entry({text: log.text, location});
+
+  addLog(log = {}, location = null) {
+    const time = DateFormatter.toTime12Hour(new Date());
+    const link = location && location.hasLocation ? ` — ${location.mapViewUrl}` : '';
+    const entry = new Entry({
+      level: 4,
+      header: `${time}${link}`,
+      body: log.text
+    });
     this.sections.add(entry.header, entry.body, entry.level);
   }
-  
 }
 
 // ObsidianCalendarEvent - wraps the native Scriptable CalendarEvent
