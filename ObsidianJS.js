@@ -228,6 +228,10 @@ class ObsidianFile {
 	saveLines(lines) {
 		this.write(lines.join(ObsidianFile.newline));
 	}
+  
+  static normalizePath(path) {
+  		return (path || '').replace(/\|/g, '/').replace(/\\\//g, '/');
+  }
 }
 
 // FrontMatter class to handle YAML metadata
@@ -862,6 +866,45 @@ class EntryLocation {
     }
 }
 
+class EntryPhoto {
+  constructor({caption = '', filename = ''} = {}){
+    this.caption = caption;
+    this.filename = filename;
+  }
+  
+  get header() {
+    const time = DateFormatter.toTime12Hour(new Date());
+    return this.caption ? `${time} - ${this.caption}` : time;
+  }
+  
+  get body() {
+    return `![[${this.filename}]]`;
+  }
+  
+  static async create({caption = '', assetsFolder = '', 
+  		bookmark = ObsidianConfig.bookmark} = {}){
+    const image = args.images[0];
+    if (!image) throw new Error("No image provided");
+    
+    const now = new Date();
+    const d = `${DateFormatter.toFilename(now)}`;
+    const t = `${DateFormatter.toTime24Hour(now).replace(':', '')}`;
+    const filename = `${d}-${t}.jpg`;
+    
+    const fm = FileManager.local();
+    const vaultPath = fm.bookmarkedPath(bookmark);
+    const folderPath = fm.joinPath(vaultPath, assetsFolder);
+    
+    if (!fm.fileExists(folderPath)) {
+      fm.createDirectory(folderPath, true);
+    }
+    
+    fm.write(fm.joinPath(folderPath, filename), Data.fromJPEG(image));
+    
+    return new EntryPhoto({caption, filename});
+  }
+}
+
 class Entry {
   constructor({level = 4, header = '', body = ''} = {}) {
     this.level = level;
@@ -874,24 +917,50 @@ class Entry {
 class DailyNote extends ObsidianNote {
 
   constructor(params = {}) {
+    if (!params.config) throw new Error("Config is required");
+    
     const config = params.config;
-    const folder = config.dailyNotesFolder;
     const bookmark = config.bookmark;
-    super({ bookmark, folder, filename: DateFormatter.toFilename(new Date()) + ".md" });
-    this._params = params;
+    const folder = ObsidianFile.normalizePath(config.dailyNotesFolder);
+    
+    super({ 
+      bookmark,
+      folder, 
+      filename: DateFormatter.toFilename(new Date()) + ".md" });
+      
+    this._config = config;
+    this._log = params.log || null;
+    this._photo = params.photo || null;
   }
 
   async init() {
-    const location = await EntryLocation.current();
-    if (!this.exists()) {
+    let location = null;
+  		const isNew = !this.exists();
+    
+    if (isNew || this._log) {
+      location = await EntryLocation.current();
+    }
+    
+    if (isNew) {
       this.setFrontMatter({
         created: DateFormatter.toISO(new Date()),
         tags: ["daily-notes"],
-        location: location.hasLocation ? `${location.latitude},${location.longitude}` : '',
+        location: location && location.hasLocation ? `${location.latitude},${location.longitude}` : '',
         type: "note"
       });
     }
-    if (this._params.log) this.addLog(this._params.log, location);
+    if (this._log) this.addLog(this._log, location);
+    
+    if (this._photo) {
+      const assetFolder = 
+      		ObsidianFile.normalizePath(this._config.assetsFolder);
+      const photo = await EntryPhoto.create({
+        caption: this._photo.caption || '',
+        assetFolder: assetFolder || '',
+        bookmark: this._config.bookmark
+      });
+      this.addPhoto(photo);
+    }
     return this;
   }
 
@@ -905,6 +974,16 @@ class DailyNote extends ObsidianNote {
     });
     this.sections.add(entry.header, entry.body, entry.level);
   }
+  
+  addPhoto(photo) {
+    const entry = new Entry({
+      level: 4,
+      header: photo.header,
+      body: photo.body
+    });
+    this.sections.add(entry.header, entry.body, entry.level);
+  }
+  
 }
 
 // ObsidianCalendarEvent - wraps the native Scriptable CalendarEvent
@@ -1058,6 +1137,7 @@ const ObsidianJS = {
 	DailyNote: DailyNote,
 	Entry: Entry,
   EntryLocation: EntryLocation,
+  EntryPhoto: EntryPhoto,
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
