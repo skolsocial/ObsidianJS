@@ -2,18 +2,26 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: red; icon-glyph: magic;
 const ojs = importModule("ObsidianJS");
+const input = args.shortcutParameter || {};
 
-const params = args.shortcutParameter || { 
+// build config
+const now = new Date();
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const monthName = ojs.DateFormatter.toDisplayDate(now).split(' ')[0];
+const config = args.shortcutParameter || { 
   	config: { 
       bookmark: "obsidian_vault", 
-      dailyNotesFolder: "Daily Notes" 
-  }, 
-  log: { text: 
-    "Test entry" 
+      dailyNotesFolder: "Daily Notes"
+	  assetsFolder: `Daily Notes/${year}/${month} ${monthName}`
   } 
 };
+// route by type
+const type = input.type;
+const payload = { config };
+payload[type] = input;
 
-const note = await new ojs.DailyNote(params).init();
+const note = await new ojs.DailyNote(payload).init();
 note.save();
 
 Script.setShortcutOutput("OK");
