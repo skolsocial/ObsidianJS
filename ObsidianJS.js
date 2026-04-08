@@ -232,6 +232,17 @@ class ObsidianFile {
   static normalizePath(path) {
   		return (path || '').replace(/\|/g, '/').replace(/\\\//g, '/');
   }
+  
+  static ensureDirectory(fm, path){
+    const parts = path.split('/');
+    let current = '';
+    for (const part of parts) {
+      current = current ? fm.joinPath(current, part): part;
+      if (!fm.fileExists(current)) {
+        fm.createDirectory(current, false);
+      }
+    }
+  }
 }
 
 // FrontMatter class to handle YAML metadata
@@ -867,9 +878,10 @@ class EntryLocation {
 }
 
 class EntryPhoto {
-  constructor({caption = '', filename = ''} = {}){
+  constructor({caption = '', filename = '', assetsFolder = ''} = {}){
     this.caption = caption;
     this.filename = filename;
+    this.assetsFolder = assetsFolder;
   }
   
   get header() {
@@ -878,11 +890,11 @@ class EntryPhoto {
   }
   
   get body() {
-    return `![[${this.filename}]]`;
-  }
+  return `![[${this.assetsFolder}/${this.filename}]]`;
+	}
   
   static async create({caption = '', assetsFolder = '', 
-  		bookmark = ObsidianConfig.bookmark} = {}){
+  		bookmark = ''} = {}){
     const image = args.images[0];
     if (!image) throw new Error("No image provided");
     
@@ -896,12 +908,16 @@ class EntryPhoto {
     const folderPath = fm.joinPath(vaultPath, assetsFolder);
     
     if (!fm.fileExists(folderPath)) {
-      fm.createDirectory(folderPath, true);
+      ObsidianFile.ensureDirectory(fm, folderPath);
     }
     
     fm.write(fm.joinPath(folderPath, filename), Data.fromJPEG(image));
     
-    return new EntryPhoto({caption, filename});
+    return new EntryPhoto({
+  			caption: `vaultPath: ${vaultPath}\nfolderPath: ${folderPath}\n${caption}`,
+  			filename,
+  			assetsFolder
+		});
   }
 }
 
@@ -943,7 +959,7 @@ class DailyNote extends ObsidianNote {
     
     if (isNew) {
       this.setFrontMatter({
-        created: DateFormatter.toISO(new Date()),
+        created: `${DateFormatter.toISO(new Date())} ${DateFormatter.toTime24Hour(new Date())}`,
         tags: ["daily-notes"],
         location: location && location.hasLocation ? `${location.latitude},${location.longitude}` : '',
         type: "note"
@@ -956,7 +972,7 @@ class DailyNote extends ObsidianNote {
       		ObsidianFile.normalizePath(this._config.assetsFolder);
       const photo = await EntryPhoto.create({
         caption: this._photo.caption || '',
-        assetFolder: assetFolder || '',
+        assetsFolder: assetFolder || '',
         bookmark: this._config.bookmark
       });
       this.addPhoto(photo);
@@ -974,7 +990,7 @@ class DailyNote extends ObsidianNote {
     });
     this.sections.add(entry.header, entry.body, entry.level);
   }
-  
+  // photo.body
   addPhoto(photo) {
     const entry = new Entry({
       level: 4,

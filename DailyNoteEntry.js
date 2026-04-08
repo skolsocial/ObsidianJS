@@ -9,13 +9,11 @@ const now = new Date();
 const year = now.getFullYear();
 const month = String(now.getMonth() + 1).padStart(2, '0');
 const monthName = ojs.DateFormatter.toDisplayDate(now).split(' ')[0];
-const config = args.shortcutParameter || { 
-  	config: { 
+const config = { 
       bookmark: "obsidian_vault", 
       dailyNotesFolder: "Daily Notes",
-	    assetsFolder: `Daily Notes/${year}/${month} ${monthName}`
-  } 
-};
+	    assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`
+	};
 // route by type
 const type = input.type;
 const payload = { config };
@@ -23,6 +21,8 @@ payload[type] = input;
 
 const note = await new ojs.DailyNote(payload).init();
 note.save();
+
+console.log(JSON.stringify(payload));
 
 Script.setShortcutOutput("OK");
 Script.complete();
