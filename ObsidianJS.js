@@ -384,10 +384,12 @@ class Section {
 	}
 
 	append(text) {
-		if (this.content && !this.content.endsWith(ObsidianFile.newline)) {
-			this.content += ObsidianFile.newline;
-		}
-		this.content += text;
+    if (this.content){
+      this.content = this.content.trimEnd() +
+      		ObsidianFile.newline + text.trimStart();
+    } else {
+      this.content = text.trimStart();
+    }
 		this._notifyParent();
 	}
 
@@ -409,7 +411,7 @@ class Section {
 			parts.push(this.headerMarkdown);
 		}
 		if (this.content) {
-			parts.push(this.content);
+			parts.push(this.content.trimEnd());
 		}
 		return parts.join(ObsidianFile.newline);
 	}
@@ -944,10 +946,7 @@ class DailyNote extends ObsidianNote {
       folder, 
       filename: DateFormatter.toFilename(new Date()) + ".md" });
       
-    this._config = config;
-    this._section = params.section || null;
-    this._log = params.log || null;
-    this._photo = params.photo || null;
+    this._params = params;
   }
   
   static parseSection(sectionString) {
@@ -960,36 +959,39 @@ class DailyNote extends ObsidianNote {
     let location = null;
   		const isNew = !this.exists();
     
-    if (isNew || this._log) {
+    if (isNew || this._params.log) {
       location = await EntryLocation.current();
     }
     
     if (isNew) {
+      const iso = `${DateFormatter.toISO(new Date())}`
+      const time = `${DateFormatter.toTime24Hour(new Date())}`
+      const loc = location && location.hasLocation;
       this.setFrontMatter({
-        created: `${DateFormatter.toISO(new Date())} ${DateFormatter.toTime24Hour(new Date())}`,
+        created: `${iso} ${time}`,
         tags: ["daily-notes"],
-        location: location && location.hasLocation ? `${location.latitude},${location.longitude}` : '',
+        location: loc ? `${location.latitude},${location.longitude}` : '',
         type: "note"
       });
     }
-    if (this._log) this.addLog(this._log, location);
+    if (this._params.log) this.addLog(this._params.log, location);
     
-    if (this._photo) {
-      const assetFolder = 
-      		ObsidianFile.normalizePath(this._config.assetsFolder);
+    if (this._params.photo) {
+      const assetsFolder = 
+      		ObsidianFile.normalizePath(this._params.config.assetsFolder);
       const photo = await EntryPhoto.create({
-        caption: this._photo.caption || '',
-        assetsFolder: assetFolder || '',
-        bookmark: this._config.bookmark
+        caption: this._params.photo.caption || '',
+        assetsFolder: assetsFolder || '',
+        bookmark: this._params.config.bookmark
       });
       this.addPhoto(photo);
     }
     return this;
   }
   
-  _addToNote(entry) {
+  _addToNote(entry, section = null) {
     if (this._section) {
-      const { level, name } = DailyNote.parseSection(this._section);
+      const { level, name } = DailyNote.parseSection(section);
       let section = this.sections.find(name);
       if (!section) section = this.sections.add(name, '', level);
       section.append(`\n${entry.header}\n${entry.body}`);
@@ -1006,7 +1008,7 @@ class DailyNote extends ObsidianNote {
       level: 4,
       header: `${time}${link}`,
       body: log.text
-    }));
+    }), this._params.log.section);
   }
   // photo.body
   addPhoto(photo) {
@@ -1014,7 +1016,7 @@ class DailyNote extends ObsidianNote {
       level: 4,
       header: photo.header,
       body: photo.body
-    }));
+    }), this._params.photo.section || null);
   }
 }
 
