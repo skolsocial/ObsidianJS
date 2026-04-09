@@ -945,8 +945,15 @@ class DailyNote extends ObsidianNote {
       filename: DateFormatter.toFilename(new Date()) + ".md" });
       
     this._config = config;
+    this._section = params.section || null;
     this._log = params.log || null;
     this._photo = params.photo || null;
+  }
+  
+  static parseSection(sectionString) {
+    const match = sectionString.match(/^(#{1,6})\s+(.+)$/);
+    if (!match) return {level: 2, name: sectionString};
+    return {level: match[1].length, name: match[2]};
   }
 
   async init() {
@@ -979,27 +986,36 @@ class DailyNote extends ObsidianNote {
     }
     return this;
   }
+  
+  _addToNote(entry) {
+    if (this._section) {
+      const { level, name } = DailyNote.parseSection(this._section);
+      let section = this.sections.find(name);
+      if (!section) section = this.sections.add(name, '', level);
+      section.append(`\n${entry.header}\n${entry.body}`);
+    } else {
+    this.sections.add(entry.header, entry.body, entry.level);
+    }
+  }
 
   addLog(log = {}, location = null) {
     const time = DateFormatter.toTime12Hour(new Date());
-    const link = location && location.hasLocation ? ` — ${location.mapViewUrl}` : '';
-    const entry = new Entry({
+    const loc = location && location.hasLocation;
+    const link = loc ? ` — ${location.mapViewUrl}` : '';
+    this._addToNote(new Entry({
       level: 4,
       header: `${time}${link}`,
       body: log.text
-    });
-    this.sections.add(entry.header, entry.body, entry.level);
+    }));
   }
   // photo.body
   addPhoto(photo) {
-    const entry = new Entry({
+    this._addToNote(new Entry({
       level: 4,
       header: photo.header,
       body: photo.body
-    });
-    this.sections.add(entry.header, entry.body, entry.level);
+    }));
   }
-  
 }
 
 // ObsidianCalendarEvent - wraps the native Scriptable CalendarEvent
