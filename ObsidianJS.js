@@ -577,6 +577,31 @@ class Sections {
 		this._parent._markDirty();
 		return newSection; // Return the section for immediate use
 	}
+  
+  addAfterSection(headerText, content, level, sectionName) {
+  		const sectionIndex = this._sections.findIndex(s => s.header === sectionName);
+  		if (sectionIndex === -1) return this.add(headerText, content, level);
+  
+  		const sectionLevel = this._sections[sectionIndex].level;
+  
+  		// Find the last subsection of this section
+  		let insertIndex = sectionIndex;
+  		for (let i = sectionIndex + 1; i < this._sections.length; i++) {
+    		if (this._sections[i].level <= sectionLevel) break;
+    		insertIndex = i;
+  		}
+  
+  		const newSection = new Section({
+    		header: headerText,
+    		content,
+    		level,
+    		parent: this._parent
+  		});
+  
+  		this._sections.splice(insertIndex + 1, 0, newSection);
+  		this._parent._markDirty();
+  		return newSection;
+	}
 
 	// Remove a section
 	remove(headerOrSection) {
@@ -916,7 +941,7 @@ class EntryPhoto {
     fm.write(fm.joinPath(folderPath, filename), Data.fromJPEG(image));
     
     return new EntryPhoto({
-  			caption: `vaultPath: ${vaultPath}\nfolderPath: ${folderPath}\n${caption}`,
+  			caption: caption,
   			filename,
   			assetsFolder
 		});
@@ -928,6 +953,9 @@ class Entry {
     this.level = level;
     this.header = header;
     this.body = body;
+  }
+  get headerMarkdown() {
+    return '#'.repeat(this.level) + ' ' + this.header;
   }
 }
 
@@ -990,15 +1018,16 @@ class DailyNote extends ObsidianNote {
   }
   
   _addToNote(entry, section = null) {
-    if (this._section) {
-      const { level, name } = DailyNote.parseSection(section);
-      let section = this.sections.find(name);
-      if (!section) section = this.sections.add(name, '', level);
-      section.append(`\n${entry.header}\n${entry.body}`);
-    } else {
-    this.sections.add(entry.header, entry.body, entry.level);
-    }
-  }
+  if (section) {
+    const { level, name } = DailyNote.parseSection(section);
+    let s = this.sections.find(name);
+    if (!s) s = this.sections.add(name, '', level);
+    		this.sections.addAfterSection(
+          entry.header, entry.body, entry.level, name);
+  		} else {
+  		  this.sections.add(entry.header, entry.body, entry.level);
+ 	 	}
+	}
 
   addLog(log = {}, location = null) {
     const time = DateFormatter.toTime12Hour(new Date());
