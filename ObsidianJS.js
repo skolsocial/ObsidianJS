@@ -553,7 +553,7 @@ class Sections {
 		content = ObsidianFile.nullstring,
 		level = 1,
 		insertAfter = null,
-    insterBefore = null
+    insertBefore = null
 	) {
 		const newSection = new Section({
 			header: headerText,
@@ -1065,21 +1065,44 @@ class DailyNote extends ObsidianNote {
       });
       this.addPhoto(photo);
     }
+    
+    if(this._params.link) {
+      const link = await EntryLink.create({
+        url: this._params.link.url,
+        note: this._params.link.note || ''
+      });
+      this.addLink(link);
+    }
     return this;
   }
-  
-  _addToNote(entry, section = null) {
-  if (section) {
-    const { level, name } = DailyNote.parseSection(section);
-    let s = this.sections.find(name);
-    if (!s) s = this.sections.add(name, '', level);
-    		this.sections.addAfterSection(
-          entry.header, entry.body, entry.level, name);
-  		} else {
-  		  this.sections.add(entry.header, entry.body, entry.level);
- 	 	}
-	}
 
+	_addToNote(entry, section = null) {
+ 		if (section) {
+   		const { level, name } = DailyNote.parseSection(section);
+    		let s = this.sections.find(name);
+    		if (!s) {
+      		const insertBefore = this._resolveInsertBefore(name);
+      		s = this.sections.add(name, '', level, null, insertBefore);
+    		}
+    		s.append(`\n#### ${entry.header}\n${entry.body}`);
+  		} else {
+    		this.sections.add(entry.header, entry.body, entry.level);
+  		}
+	}  
+  
+  _resolveInsertBefore(sectionName) {
+    const order = this._params.config.sectionOrder;
+    if (!order) return null;
+    const idx = order.indexOf(sectionName);
+    if (idx === -1) return null;
+    // Find the first section after this one in the order that already exists
+		for (let i = idx + 1; i < order.length; i++){
+      const existing = this.sections.find(order[i]);
+      if (existing) return order[i];
+    }
+    return null;
+  }
+  // log info
   addLog(log = {}, location = null) {
     const time = DateFormatter.toTime12Hour(new Date());
     const loc = location && location.hasLocation;
@@ -1090,13 +1113,21 @@ class DailyNote extends ObsidianNote {
       body: log.text
     }), this._params.log.section);
   }
-  // photo.body
+  // photo body
   addPhoto(photo) {
     this._addToNote(new Entry({
       level: 4,
       header: photo.header,
       body: photo.body
     }), this._params.photo.section || null);
+  }
+  // add link
+  addLink(link) {
+    this._addToNote(new Entry({
+      level: 4,
+      header: DateFormatter.toTime12Hour(new Date()),
+      body: link.body
+    }), this._params.link.section || null);
   }
 }
 
@@ -1250,6 +1281,7 @@ const ObsidianJS = {
 	DateFormatter: DateFormatter,
 	DailyNote: DailyNote,
 	Entry: Entry,
+  EntryLink: EntryLink,
   EntryLocation: EntryLocation,
   EntryPhoto: EntryPhoto,
 	File: ObsidianFile,
