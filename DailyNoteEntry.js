@@ -12,7 +12,8 @@ const monthName = ojs.DateFormatter.toDisplayDate(now).split(' ')[0];
 const config = { 
       bookmark: "obsidian_vault", 
       dailyNotesFolder: "Daily Notes",
-	    assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`
+	assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`,
+      sectionOrder: ["📖 Reading List", "📓 Log"]
 	};
 // route by type
 const type = input.type;

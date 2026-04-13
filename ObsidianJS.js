@@ -858,6 +858,7 @@ class EntryLink {
 		lines.push(`> **[${this.title}](${this.url})**`);
     if (this.description) lines.push(`> ${this.description}`);
     if (this.note) lines.push(`> \n> *${this.note}*`);
+    lines.push('');
     return lines.join('\n');
   }
   
@@ -1084,7 +1085,10 @@ class DailyNote extends ObsidianNote {
       		const insertBefore = this._resolveInsertBefore(name);
       		s = this.sections.add(name, '', level, null, insertBefore);
     		}
-    		s.append(`\n#### ${entry.header}\n${entry.body}`);
+      const entryText = entry.header? 
+      		`\n#### ${entry.header}\n${entry.body}`
+        : `\n${entry.body}`;
+    		s.append(entryText);
   		} else {
     		this.sections.add(entry.header, entry.body, entry.level);
   		}
@@ -1125,7 +1129,7 @@ class DailyNote extends ObsidianNote {
   addLink(link) {
     this._addToNote(new Entry({
       level: 4,
-      header: DateFormatter.toTime12Hour(new Date()),
+      header: '',
       body: link.body
     }), this._params.link.section || null);
   }
