@@ -552,7 +552,8 @@ class Sections {
 		headerText,
 		content = ObsidianFile.nullstring,
 		level = 1,
-		insertAfter = null
+		insertAfter = null,
+    insterBefore = null
 	) {
 		const newSection = new Section({
 			header: headerText,
@@ -560,7 +561,14 @@ class Sections {
 			level,
 			parent: this._parent,
 		});
-
+    if (insertBefore) {
+     	const index = this._sections.findIndex(s => s.header === insertBefore);
+    		if (index !== -1) {
+          this._sections.splice(index, 0, newSection);
+          this._parent._markDirty();
+          return newSection;
+        } 
+    }
 		if (insertAfter) {
 			const index = this._sections.findIndex(
 				(s) => s.header === insertAfter
@@ -834,6 +842,49 @@ class ObsidianNote extends ObsidianFile {
 			.map((section) => section.toString())
 			.join(ObsidianFile.newline);
 	}
+}
+
+class EntryLink {
+  constructor({url = '', title = '', description = '', note = ''} = {}) {
+    this.url = url;
+    this.title = title || url;
+    this.description = description;
+    this.note = note;
+  }
+  
+  get body() {
+    const lines = [];
+    // blockquote "card" - renders visually grouped in Obsidian
+		lines.push(`> **[${this.title}](${this.url})**`);
+    if (this.description) lines.push(`> ${this.description}`);
+    if (this.note) lines.push(`> \n> *${this.note}*`);
+    return lines.join('\n');
+  }
+  
+  static async fetch(url) {
+    try {
+      const req = new Request(url);
+      req.timeoutInterval = 10;
+      const html = await req.loadString();
+      
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+      const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+      const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+      
+      const title = (ogTitle?.[1] || titleMatch?.[1] || '').trim();
+      const description = (ogDesc?.[1] || metaDesc?.[1] || '').trim();
+      
+      return {title, description};
+    } catch (e) {
+      return {title: '', description: ''};
+    }
+  }
+ 
+    static async create({url = '', note = ''} = {}) {
+      const { title, description } = await EntryLink.fetch(url);
+      return new EntryLink({ url, title, description, note });
+    }
 }
 
 class EntryLocation {
