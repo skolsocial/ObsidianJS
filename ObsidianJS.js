@@ -793,7 +793,6 @@ class ObsidianNote extends ObsidianFile {
 	// Save changes back to file
 	save() {
 		this.parse(); // Ensure we're parsed
-
 		const parts = [];
 
 		// Add frontmatter if it exists
@@ -803,14 +802,8 @@ class ObsidianNote extends ObsidianFile {
 
 		// Add sections
 		for (const section of this._sections) {
-			if (
-				parts.length > 0 &&
-				!parts[parts.length - 1].endsWith(ObsidianFile.newline)
-			) {
-				parts.push(ObsidianFile.nullstring); // Add blank line
-			}
 			parts.push(section.toString());
-		}
+    }
 
 		this.write(parts.join(ObsidianFile.newline));
 		this._markDirty(false);
@@ -1080,16 +1073,14 @@ class DailyNote extends ObsidianNote {
 	_addToNote(entry, section = null) {
  		if (section) {
    		const { level, name } = DailyNote.parseSection(section);
-    		let s = this.sections.find(name);
-    		if (!s) {
+      const sections = this.sections;
+    		if (!sections.find(name)) {
       		const insertBefore = this._resolveInsertBefore(name);
-      		s = this.sections.add(name, '', level, null, insertBefore);
+        sections.add(name, '', level, null, insertBefore);
     		}
-      const entryText = entry.header? 
-      		`\n#### ${entry.header}\n${entry.body}`
-        : `\n${entry.body}`;
-    		s.append(entryText);
-  		} else {
+      sections.addAfterSection(entry.header, entry.body, 
+        entry.level, name);
+      } else {
     		this.sections.add(entry.header, entry.body, entry.level);
   		}
 	}  
