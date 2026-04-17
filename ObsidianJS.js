@@ -711,7 +711,7 @@ class ObsidianNote extends ObsidianFile {
 		}); // Root section
 
 		for (const line of contentLines) {
-			const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
+			const headerMatch = line.match(/^(#{1,2})\s+(.+)$/);
 
 			if (headerMatch) {
 				// Save previous section if it has content
