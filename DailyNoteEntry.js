@@ -9,12 +9,14 @@ const now = new Date();
 const year = now.getFullYear();
 const month = String(now.getMonth() + 1).padStart(2, '0');
 const monthName = ojs.DateFormatter.toDisplayDate(now).split(' ')[0];
-const config = { 
-      bookmark: "obsidian_vault", 
-      dailyNotesFolder: "Daily Notes",
-	assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`,
-      sectionOrder: ["📖 Reading List", "📓 Log"]
-	};
+const config = {
+  bookmark: "obsidian_vault",
+  dailyNotes: {
+    folder: "Daily Notes",
+    template: "Obsidian/Templates/Daily Note.md"
+  },
+  assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`
+};
 // route by type
 const type = input.type;
 const payload = { config };

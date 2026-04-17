@@ -1009,49 +1009,94 @@ class DailyNote extends ObsidianNote {
 
   constructor(params = {}) {
     if (!params.config) throw new Error("Config is required");
+    if (!params.config.dailyNotes) throw new Error("Config.dailyNotes is required");
     
     const config = params.config;
     const bookmark = config.bookmark;
-    const folder = ObsidianFile.normalizePath(config.dailyNotesFolder);
+    const folder = ObsidianFile.normalizePath(config.dailyNotes.folder);
     
     super({ 
       bookmark,
       folder, 
-      filename: DateFormatter.toFilename(new Date()) + ".md" });
+      filename: DateFormatter.toFilename(new Date()) + ".md"
+    });
       
     this._params = params;
   }
-  
-  static parseSection(sectionString) {
+
+  // Read template and substitute placeholders
+  _createFromTemplate(location) {
+    const config = this._params.config;
+    const fm = FileManager.local();
+    const vaultPath = fm.bookmarkedPath(config.bookmark);
+    const templatePath = fm.joinPath(vaultPath, 
+      ObsidianFile.normalizePath(config.dailyNotes.template));
+    
+    if (!fm.fileExists(templatePath)) {
+      const n = new Notification();
+      n.title = "ObsidianJS Error";
+      n.body = `Template not found: ${config.dailyNotes.template}`;
+      n.schedule();
+      return false;
+    }
+
+    const now = new Date();
+    const iso = DateFormatter.toISO(now);
+    const time = DateFormatter.toTime24Hour(now);
+    const loc = location && location.hasLocation 
+      ? `${location.latitude},${location.longitude}` 
+      : '';
+
+    let content = fm.readString(templatePath);
+    content = content.replace(
+      /<% tp\.date\.now\("YYYY-MM-DD HH:mm:ss"\) %>/g, 
+      `${iso} ${time}`
+    );
+    content = content.replace(
+      /<% await tp\.user\.getLocation\(\) %>/g, 
+      loc
+    );
+
+    this.write(content);
+    return true;
+  }
+
+  // Find a section by its full markdown header string e.g. "## 📓 Log"
+  _findSection(sectionString) {
     const match = sectionString.match(/^(#{1,6})\s+(.+)$/);
-    if (!match) return {level: 2, name: sectionString};
-    return {level: match[1].length, name: match[2]};
+    if (!match) return null;
+    const name = match[2];
+    return this.sections.find(name);
+  }
+
+  // Notify and return false if something goes wrong
+  _notify(title, body) {
+    const n = new Notification();
+    n.title = title;
+    n.body = body;
+    n.schedule();
   }
 
   async init() {
+    const isNew = !this.exists();
     let location = null;
-  		const isNew = !this.exists();
-    
+
     if (isNew || this._params.log) {
       location = await EntryLocation.current();
     }
-    
+
     if (isNew) {
-      const iso = `${DateFormatter.toISO(new Date())}`
-      const time = `${DateFormatter.toTime24Hour(new Date())}`
-      const loc = location && location.hasLocation;
-      this.setFrontMatter({
-        created: `${iso} ${time}`,
-        tags: ["daily-notes"],
-        location: loc ? `${location.latitude},${location.longitude}` : '',
-        type: "note"
-      });
+      const created = this._createFromTemplate(location);
+      if (!created) return this;
+      this._parsed = false; // Force re-parse after template write
     }
+
     if (this._params.log) this.addLog(this._params.log, location);
-    
+
     if (this._params.photo) {
-      const assetsFolder = 
-      		ObsidianFile.normalizePath(this._params.config.assetsFolder);
+			const assetsFolder = ObsidianFile.normalizePath(
+  				this._params.config.assetsFolder
+			);
       const photo = await EntryPhoto.create({
         caption: this._params.photo.caption || '',
         assetsFolder: assetsFolder || '',
@@ -1059,45 +1104,40 @@ class DailyNote extends ObsidianNote {
       });
       this.addPhoto(photo);
     }
-    
-    if(this._params.link) {
+
+    if (this._params.link) {
       const link = await EntryLink.create({
         url: this._params.link.url,
         note: this._params.link.note || ''
       });
       this.addLink(link);
     }
+
     return this;
   }
 
-	_addToNote(entry, section = null) {
- 		if (section) {
-   		const { level, name } = DailyNote.parseSection(section);
-      const sections = this.sections;
-    		if (!sections.find(name)) {
-      		const insertBefore = this._resolveInsertBefore(name);
-        sections.add(name, '', level, null, insertBefore);
-    		}
-      sections.addAfterSection(entry.header, entry.body, 
-        entry.level, name);
-      } else {
-    		this.sections.add(entry.header, entry.body, entry.level);
-  		}
-	}  
-  
-  _resolveInsertBefore(sectionName) {
-    const order = this._params.config.sectionOrder;
-    if (!order) return null;
-    const idx = order.indexOf(sectionName);
-    if (idx === -1) return null;
-    // Find the first section after this one in the order that already exists
-		for (let i = idx + 1; i < order.length; i++){
-      const existing = this.sections.find(order[i]);
-      if (existing) return order[i];
+  _addToNote(entry, sectionString) {
+    const section = this._findSection(sectionString);
+    
+    if (!section) {
+      this._notify(
+        "ObsidianJS Error",
+        `Section "${sectionString}" not found in ${this.fileName}`
+      );
+      return;
     }
-    return null;
+
+    const lines = [];
+    if (entry.header) {
+      lines.push('#'.repeat(entry.level) + ' ' + entry.header);
+    }
+    if (entry.body) {
+      lines.push(entry.body);
+    }
+    section.append(lines.join(ObsidianFile.newline));
+    this.save();
   }
-  // log info
+
   addLog(log = {}, location = null) {
     const time = DateFormatter.toTime12Hour(new Date());
     const loc = location && location.hasLocation;
@@ -1108,7 +1148,7 @@ class DailyNote extends ObsidianNote {
       body: log.text
     }), this._params.log.section);
   }
-  // photo body
+
   addPhoto(photo) {
     this._addToNote(new Entry({
       level: 4,
@@ -1116,13 +1156,27 @@ class DailyNote extends ObsidianNote {
       body: photo.body
     }), this._params.photo.section || null);
   }
-  // add link
+
   addLink(link) {
     this._addToNote(new Entry({
       level: 4,
       header: '',
       body: link.body
     }), this._params.link.section || null);
+  }
+
+  // Overwrite a section's content entirely (e.g. Calendar sync)
+  setSection(sectionString, content) {
+    const section = this._findSection(sectionString);
+    if (!section) {
+      this._notify(
+        "ObsidianJS Error",
+        `Section "${sectionString}" not found in ${this.fileName}`
+      );
+      return;
+    }
+    section.content = content;
+    this.save();
   }
 }
 
