@@ -963,13 +963,68 @@ class DailyNote extends ObsidianNote {
 		if (!params.config) throw new Error("Config is required");
 		const config = params.config;
 		const bookmark = config.bookmark;
-		const folder = ObsidianFile.normalizePath(config.dailyNotesFolder);
+		// Support nested config: config.dailyNotes.folder
+		// Falls back to flat config.dailyNotesFolder for backwards compatibility
+		const dailyNotes = config.dailyNotes || {};
+		const folder = ObsidianFile.normalizePath(
+			dailyNotes.folder || config.dailyNotesFolder
+		);
 		super({
 			bookmark,
 			folder,
 			filename: DateFormatter.toFilename(new Date()) + ".md"
 		});
 		this._params = params;
+	}
+
+	// Read the template file, substitute Templater placeholders with real values,
+	// and write the result as today's daily note.
+	_createFromTemplate(location) {
+		const config = this._params.config;
+		const dailyNotes = config.dailyNotes || {};
+		const templatePath = dailyNotes.template;
+
+		if (!templatePath) {
+			this._notify("ObsidianJS Error", "No template path in config.dailyNotes.template");
+			return false;
+		}
+
+		const fullPath = this.fm.joinPath(this.vaultPath, templatePath);
+		if (!this.fm.fileExists(fullPath)) {
+			this._notify("ObsidianJS Error", `Template not found: ${templatePath}`);
+			return false;
+		}
+
+		const iso = DateFormatter.toISO(new Date());
+		const time = DateFormatter.toTime24Hour(new Date());
+		const loc = (location && location.hasLocation)
+			? `${location.latitude},${location.longitude}`
+			: '';
+
+		let content = this.fm.readString(fullPath);
+		content = content.replace(
+			/<% tp\.date\.now\("YYYY-MM-DD HH:mm:ss"\) %>/g,
+			`${iso} ${time}`
+		);
+		content = content.replace(
+			/<% tp\.date\.now\("YYYY-MM-DD HH:mm"\) %>/g,
+			`${iso} ${time}`
+		);
+		content = content.replace(
+			/<% await tp\.user\.getLocation\(\) %>/g,
+			loc
+		);
+
+		this.write(content);
+		return true;
+	}
+
+	// Send an iOS notification when something goes wrong
+	_notify(title, body) {
+		const n = new Notification();
+		n.title = title;
+		n.body = body;
+		n.schedule();
 	}
 
 	async init() {
@@ -981,15 +1036,9 @@ class DailyNote extends ObsidianNote {
 		}
 
 		if (isNew) {
-			const iso = DateFormatter.toISO(new Date());
-			const time = DateFormatter.toTime24Hour(new Date());
-			const loc = location && location.hasLocation;
-			this.setFrontMatter({
-				created: `${iso} ${time}`,
-				tags: ["daily-notes"],
-				location: loc ? `${location.latitude},${location.longitude}` : '',
-				type: "note"
-			});
+			const created = this._createFromTemplate(location);
+			if (!created) return this;
+			this._parsed = false; // Force re-parse after template write
 		}
 
 		if (this._params.log) this.addLog(this._params.log, location);
