@@ -1,6 +1,9 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: deep-blue; icon-glyph: magic;
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: deep-blue; icon-glyph: magic;
 
 // Config *********************************************************************
 const ObsidianConfig = {
@@ -16,92 +19,92 @@ const CalendarJS = globalThis.Calendar;
 class DateFormatter {
 
 	// Parse a date string or return Date object as-is
-  static parseDate(input) {
-	if (!input) return null;
-	if (typeof input === 'object' && typeof input.getFullYear === 'function') return input;
-	if (typeof input === 'string') return new Date(input);
-	return null;
-  }
+	static parseDate(input) {
+		if (!input) return null;
+		if (typeof input === 'object' && typeof input.getFullYear === 'function') return input;
+		if (typeof input === 'string') return new Date(input);
+		return null;
+	}
 
-  // Format date as ISO string: 2025-10-05
-  static toISO(date) {
-	date = DateFormatter.parseDate(date);
-    if (!date) return ObsidianFile.nullstring;
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+	// Format date as ISO string: 2025-10-05
+	static toISO(date) {
+		date = DateFormatter.parseDate(date);
+		if (!date) return ObsidianFile.nullstring;
+		const year = date.getFullYear();
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const day = date.getDate().toString().padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	}
 
-  // Format time as 12-hour: 09:00 AM
-  static toTime12Hour(date) {
-    date = DateFormatter.parseDate(date);
-    if (!date) return ObsidianFile.nullstring;
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes} ${ampm}`;
-  }
+	// Format time as 12-hour: 9:00 AM
+	static toTime12Hour(date) {
+		date = DateFormatter.parseDate(date);
+		if (!date) return ObsidianFile.nullstring;
+		const hours = date.getHours();
+		const minutes = date.getMinutes().toString().padStart(2, '0');
+		const ampm = hours >= 12 ? 'PM' : 'AM';
+		const displayHours = hours % 12 || 12;
+		return `${displayHours}:${minutes} ${ampm}`;
+	}
 
-  // Format time as 24-hour: 09:00
-  static toTime24Hour(date) {
-	date = DateFormatter.parseDate(date);
-    if (!date) return ObsidianFile.nullstring;
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
+	// Format time as 24-hour: 09:00
+	static toTime24Hour(date) {
+		date = DateFormatter.parseDate(date);
+		if (!date) return ObsidianFile.nullstring;
+		const hours = date.getHours().toString().padStart(2, '0');
+		const minutes = date.getMinutes().toString().padStart(2, '0');
+		return `${hours}:${minutes}`;
+	}
 
-  // Format for filename: 2025-10-05
-  static toFilename(date) {
-    return DateFormatter.toISO(date);
-  }
+	// Format for filename: 2025-10-05
+	static toFilename(date) {
+		return DateFormatter.toISO(date);
+	}
 
-  // Format as display date: October 5, 2025
-  static toDisplayDate(date) {
-    date = DateFormatter.parseDate(date);
-    if (!date) return ObsidianFile.nullstring;
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
-  }
+	// Format as display date: October 5, 2025
+	static toDisplayDate(date) {
+		date = DateFormatter.parseDate(date);
+		if (!date) return ObsidianFile.nullstring;
+		const options = { year: 'numeric', month: 'long', day: 'numeric' };
+		return date.toLocaleDateString('en-US', options);
+	}
 
-  // Format as day of week: Monday
-  static toDayOfWeek(date) {
-    date = DateFormatter.parseDate(date);
-    if (!date) return ObsidianFile.nullstring;
-    const options = { weekday: 'long' };
-    return date.toLocaleDateString('en-US', options);
-  }
+	// Format as day of week: Monday
+	static toDayOfWeek(date) {
+		date = DateFormatter.parseDate(date);
+		if (!date) return ObsidianFile.nullstring;
+		const options = { weekday: 'long' };
+		return date.toLocaleDateString('en-US', options);
+	}
 
-  // Format as short date: Oct 5, 2025
-  static toShortDate(date) {
-    date = DateFormatter.parseDate(date);
-    if (!date) return ObsidianFile.nullstring;
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
-  }
+	// Format as short date: Oct 5, 2025
+	static toShortDate(date) {
+		date = DateFormatter.parseDate(date);
+		if (!date) return ObsidianFile.nullstring;
+		const options = { year: 'numeric', month: 'short', day: 'numeric' };
+		return date.toLocaleDateString('en-US', options);
+	}
 
-  // Get today's date at midnight
-  static getToday() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  }
+	// Get today's date at midnight
+	static getToday() {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		return today;
+	}
 
-  // Get start of day for any date
-  static getStartOfDay(date) {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    return start;
-  }
+	// Get start of day for any date
+	static getStartOfDay(date) {
+		const start = new Date(date);
+		start.setHours(0, 0, 0, 0);
+		return start;
+	}
 
-  // Get end of day for any date
-  static getEndOfDay(date) {
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
-    return end;
-  }
+	// Get end of day for any date
+	static getEndOfDay(date) {
+		const end = new Date(date);
+		end.setHours(23, 59, 59, 999);
+		return end;
+	}
 }
 
 // Tags class - central tag handling for both FrontMatter and Tasks
@@ -132,7 +135,7 @@ class Tags {
 		return this.tags;
 	}
 
-	toInlineString(separator = ObsidianTask.space) {
+	toInlineString(separator = " ") {
 		if (this.tags.length === 0) return ObsidianFile.nullstring;
 		return this.tags.map((tag) => `#${tag}`).join(separator);
 	}
@@ -317,9 +320,8 @@ class FrontMatter {
 }
 
 // Section class to handle individual sections of content
-// H2 sections always get a trailing blank line. All others are compressed.
 class Section {
-	static headerPrefix = "#";
+	static marker = "#";
 	static space = " ";
 
 	constructor({
@@ -342,7 +344,7 @@ class Section {
 
 	get headerMarkdown() {
 		if (!this.header) return ObsidianFile.nullstring;
-		return Section.headerPrefix.repeat(this.level) + Section.space + this.header;
+		return Section.marker.repeat(this.level) + Section.space + this.header;
 	}
 
 	append(text) {
@@ -374,153 +376,66 @@ class Section {
 		if (this.content) {
 			parts.push(this.content.trimEnd());
 		}
-		// H2 sections get a trailing blank line for visual separation
-		if (this.level === 2 && this.header) {
-			parts.push('');
-		}
 		return parts.join(ObsidianFile.newline);
+	}
+
+	getSubsections(allSections) {
+		const currentIndex = allSections.indexOf(this);
+		if (currentIndex === -1) return [];
+		const subsections = [];
+		for (let i = currentIndex + 1; i < allSections.length; i++) {
+			const section = allSections[i];
+			if (section.level <= this.level) break;
+			subsections.push(section);
+		}
+		return subsections;
 	}
 }
 
-// Sections class - manages the collection of sections in a note
+// Sections class - manages a collection of Section objects
 class Sections {
 	constructor(sectionsArray, parent) {
 		this._sections = sectionsArray;
 		this._parent = parent;
 	}
 
-	// Find by header name (first match, case-insensitive)
+	// Find first section matching header name (case-insensitive)
 	find(headerText) {
-		const lower = (headerText || '').toLowerCase();
 		return this._sections.find(
-			(section) => section.header.toLowerCase() === lower
+			(section) => section.header.toLowerCase() === headerText.toLowerCase()
 		);
 	}
 
-	// Find all sections with matching header (case-insensitive)
+	// Find all sections matching header name
 	findAll(headerText) {
-		const lower = (headerText || '').toLowerCase();
 		return this._sections.filter(
-			(section) => section.header.toLowerCase() === lower
+			(section) => section.header.toLowerCase() === headerText.toLowerCase()
 		);
 	}
 
-	// Find by level
+	// Find sections by level
 	findByLevel(level) {
 		return this._sections.filter((section) => section.level === level);
 	}
 
-	// Find by path (e.g. "Journal > Log")
-	findByPath(pathString, delimiter = " > ") {
-		const pathParts = pathString.split(delimiter).map((s) => s.trim());
-		let currentLevel = 0;
-		let found = null;
-		for (const headerText of pathParts) {
-			const startIndex = found ? this._sections.indexOf(found) + 1 : 0;
-			found = null;
-			for (let i = startIndex; i < this._sections.length; i++) {
-				const section = this._sections[i];
-				if (found === null && currentLevel > 0 && section.level <= currentLevel) {
-					break;
-				}
-				if (section.header.toLowerCase() === headerText.toLowerCase()) {
-					found = section;
-					currentLevel = section.level;
-					break;
-				}
-			}
-			if (!found) return null;
-		}
-		return found;
-	}
-
-	// Append content to the bottom of a named section.
-	// "Bottom" means just before the next sibling (equal or lesser level header)
-	// or end of note. If the section does not exist, it is created and appended
-	// to the end of the note.
-	appendToSection(headerText, content, sectionLevel = 2) {
-		let section = this.find(headerText);
-		if (!section) {
-			// Section not found — create it at the end of the note
-			section = new Section({ header: headerText, content: '', level: sectionLevel, parent: this._parent });
-			this._sections.push(section);
-			this._parent._markDirty();
-		}
-
-		const sectionIdx = this._sections.indexOf(section);
-		const sectionLvl = section.level;
-
-		// Find the insertion point: scan forward past all subsections
-		let insertIdx = sectionIdx;
-		for (let i = sectionIdx + 1; i < this._sections.length; i++) {
-			if (this._sections[i].level <= sectionLvl) break;
-			insertIdx = i;
-		}
-
-		if (insertIdx === sectionIdx) {
-			// No subsections — content appends directly to this section
-			section.append(content);
-		} else {
-			// There are subsections — append as content on the last subsection
-			this._sections[insertIdx].append(content);
-		}
-
-		this._parent._markDirty();
-	}
-
-	// Add a new section (returns the section for immediate use)
-	add(
-		headerText,
-		content = ObsidianFile.nullstring,
-		level = 1,
-		insertAfter = null,
-		insertBefore = null
-	) {
+	// Add a new section at the end of the note
+	add(headerText, content = ObsidianFile.nullstring, level = 1) {
 		const newSection = new Section({
 			header: headerText,
 			content,
 			level,
 			parent: this._parent,
 		});
-
-		if (insertBefore) {
-			const lower = insertBefore.toLowerCase();
-			const index = this._sections.findIndex(
-				s => s.header.toLowerCase() === lower
-			);
-			if (index !== -1) {
-				this._sections.splice(index, 0, newSection);
-				this._parent._markDirty();
-				return newSection;
-			}
-		}
-
-		if (insertAfter) {
-			const lower = insertAfter.toLowerCase();
-			const index = this._sections.findIndex(
-				s => s.header.toLowerCase() === lower
-			);
-			if (index !== -1) {
-				this._sections.splice(index + 1, 0, newSection);
-			} else {
-				this._sections.push(newSection);
-			}
-		} else {
-			this._sections.push(newSection);
-		}
-
+		this._sections.push(newSection);
 		this._parent._markDirty();
 		return newSection;
 	}
 
-	// Remove a section
+	// Remove a section by header text or Section object
 	remove(headerOrSection) {
 		let index;
 		if (typeof headerOrSection === "string") {
-			const lower = headerOrSection.toLowerCase();
-			index = this._sections.findIndex(
-				s => s.header.toLowerCase() === lower
-			);
+			index = this._sections.findIndex((s) => s.header === headerOrSection);
 		} else {
 			index = this._sections.indexOf(headerOrSection);
 		}
@@ -555,7 +470,7 @@ class Sections {
 	}
 }
 
-// Classes that extend/use base classes ***************************************
+// ObsidianTask class
 class ObsidianTask {
 	static checkbox = "- [ ]";
 	static checkboxCompleted = "- [x]";
@@ -579,36 +494,20 @@ class ObsidianTask {
 		this.tags = new Tags(tags);
 	}
 
-	// Priority is not yet fully specced — returns empty string until we design
-	// the task workflow. Hook exists so toMarkdown() won't crash.
-	getPrioritySymbol() {
-		if (!this.priority) return '';
-		return ` ${this.priority}`;
-	}
-
 	toMarkdown() {
 		let line = this.completed
 			? ObsidianTask.checkboxCompleted
 			: ObsidianTask.checkbox;
 		line += ObsidianTask.space + this.description;
-		if (this.dueDate) {
-			line += ` 📅 ${DateFormatter.toISO(this.dueDate)}`;
-		}
-		if (this.scheduledDate) {
-			line += ` ⏰ ${DateFormatter.toISO(this.scheduledDate)}`;
-		}
-		if (this.startDate) {
-			line += ` 🛫 ${DateFormatter.toISO(this.startDate)}`;
-		}
-		line += this.getPrioritySymbol();
-		if (!this.tags.isEmpty()) {
-			line += ObsidianTask.space + this.tags.toInlineString();
-		}
+		if (this.dueDate) line += ` 📅 ${DateFormatter.toISO(this.dueDate)}`;
+		if (this.scheduledDate) line += ` ⏰ ${DateFormatter.toISO(this.scheduledDate)}`;
+		if (this.startDate) line += ` 🛫 ${DateFormatter.toISO(this.startDate)}`;
+		if (!this.tags.isEmpty()) line += ObsidianTask.space + this.tags.toInlineString();
 		return line;
 	}
 }
 
-// ObsidianNote class extending ObsidianFile
+// ObsidianNote class
 class ObsidianNote extends ObsidianFile {
 	constructor(options) {
 		super(options);
@@ -658,20 +557,16 @@ class ObsidianNote extends ObsidianFile {
 				if (currentSection.header || currentSection.content.trim()) {
 					this._sections.push(currentSection);
 				}
-				const level = headerMatch[1].length;
-				const header = headerMatch[2];
 				currentSection = new Section({
-					header,
+					header: headerMatch[2],
 					content: ObsidianFile.nullstring,
-					level,
+					level: headerMatch[1].length,
 					parent: this,
 				});
 			} else {
 				if (currentSection.content || line.trim()) {
 					currentSection.content +=
-						(currentSection.content
-							? ObsidianFile.newline
-							: ObsidianFile.nullstring) + line;
+						(currentSection.content ? ObsidianFile.newline : ObsidianFile.nullstring) + line;
 				}
 			}
 		}
@@ -712,7 +607,7 @@ class ObsidianNote extends ObsidianFile {
 				header: ObsidianFile.nullstring,
 				content: content,
 				level: 0,
-				parent: this
+				parent: this,
 			}));
 		}
 		this._markDirty();
@@ -745,7 +640,7 @@ class ObsidianNote extends ObsidianFile {
 	}
 
 	getHeaders() {
-		return this.sections.toArray()
+		return this.sections
 			.filter((section) => section.header)
 			.map((section) => ({
 				text: section.header,
@@ -755,96 +650,135 @@ class ObsidianNote extends ObsidianFile {
 	}
 
 	getContent() {
-		return this.sections.toArray()
+		return this.sections
 			.map((section) => section.toString())
 			.join(ObsidianFile.newline);
 	}
 }
 
-// Entry types ****************************************************************
-
-// Entry - base typed entry. Each entry type knows how to render itself.
+// Entry classes **************************************************************
+// Entry: base class for all note entries.
+// All entries render as an H4 header + body text.
+// Subclasses define what goes in the header and body.
 class Entry {
-	constructor({ level = 4, header = '', body = '' } = {}) {
-		this.level = level;
-		this.header = header;
-		this.body = body;
+	static level = 4;
+
+	// Override in subclasses
+	get header() {
+		return ObsidianFile.nullstring;
 	}
 
-	get headerMarkdown() {
-		if (!this.header) return '';
-		return '#'.repeat(this.level) + ' ' + this.header;
+	// Override in subclasses
+	get body() {
+		return ObsidianFile.nullstring;
 	}
 
-	// Full rendered markdown for this entry (header + body)
+	// Renders the full markdown block for appending to a note section
 	toMarkdown() {
+		const hashes = '#'.repeat(Entry.level);
 		const parts = [];
-		if (this.header) parts.push(this.headerMarkdown);
-		if (this.body) parts.push(this.body);
-		return parts.join('\n');
+		if (this.header) {
+			parts.push(`${hashes} ${this.header}`);
+		}
+		if (this.body) {
+			parts.push(this.body);
+		}
+		return parts.join(ObsidianFile.newline);
 	}
 }
 
-// EntryLink - renders as a task checkbox with optional truncated description.
-// Description is capped at 150 chars to prevent blowouts from sites like YouTube.
-// Section placement is controlled by the caller.
-class EntryLink {
-	static MAX_DESCRIPTION_LENGTH = 150;
-
-	constructor({ url = '', title = '', description = '', note = '' } = {}) {
-		this.url = url;
-		this.title = title || url;
-		this.description = EntryLink._truncate(description);
-		this.note = note;
+// LogEntry: first line of text is the H4 header, remaining lines become bullets
+class LogEntry extends Entry {
+	constructor({ text = '' } = {}) {
+		super();
+		const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+		this._header = lines[0] || '';
+		this._bullets = lines.slice(1);
 	}
 
-	static _truncate(text, max = EntryLink.MAX_DESCRIPTION_LENGTH) {
-		if (!text) return '';
-		const trimmed = text.trim();
-		if (trimmed.length <= max) return trimmed;
-		return trimmed.substring(0, max).trimEnd() + '…';
+	get header() {
+		return this._header;
 	}
 
-	// Renders as an undated task. Actionable and moveable to a task list.
-	// - [ ] [Title](url)
-	//   > Description (if present)
-	//   > *Note (if present)*
-	toMarkdown() {
+	get body() {
+		if (this._bullets.length === 0) return ObsidianFile.nullstring;
+		return this._bullets.map(l => `- ${l}`).join(ObsidianFile.newline);
+	}
+}
+
+// CheckinEntry: timestamp + location link as header, optional note as body
+class CheckinEntry extends Entry {
+	constructor({ location = null, note = '' } = {}) {
+		super();
+		const time = DateFormatter.toTime12Hour(new Date());
+		const loc = location && location.hasLocation;
+		this._header = loc ? `${time} — ${location.mapViewUrl}` : time;
+		this._body = note || ObsidianFile.nullstring;
+	}
+
+	get header() {
+		return this._header;
+	}
+
+	get body() {
+		return this._body;
+	}
+}
+
+// PhotoEntry: timestamp + caption as header, Obsidian image embed as body
+class PhotoEntry extends Entry {
+	constructor({ caption = '', filename = '', assetsFolder = '' } = {}) {
+		super();
+		const time = DateFormatter.toTime12Hour(new Date());
+		this._header = caption ? `${time} — ${caption}` : `${time} — Photo`;
+		this._body = `![[${assetsFolder}/${filename}]]`;
+	}
+
+	get header() {
+		return this._header;
+	}
+
+	get body() {
+		return this._body;
+	}
+}
+
+// LinkEntry: timestamp + page title as header, checkbox + cardlink block as body
+class LinkEntry extends Entry {
+	constructor({ url = '', title = '', description = '' } = {}) {
+		super();
+		const time = DateFormatter.toTime12Hour(new Date());
+		const displayTitle = title || url;
+		this._header = `${time} — ${displayTitle}`;
+
+		const host = (() => {
+			try { return new URL(url).hostname; } catch(e) { return ''; }
+		})();
+
 		const lines = [];
-		lines.push(`- [ ] [${this.title}](${this.url})`);
-		if (this.description) {
-			lines.push(`  > ${this.description}`);
-		}
-		if (this.note) {
-			lines.push(`  > *${this.note}*`);
-		}
-		return lines.join('\n');
+		lines.push(`- [ ] [${displayTitle}](${url})`);
+		lines.push('');
+		lines.push('```cardlink');
+		lines.push(`url: ${url}`);
+		lines.push(`title: "${displayTitle}"`);
+		if (description) lines.push(`description: "${description}"`);
+		if (host) lines.push(`host: ${host}`);
+		lines.push('```');
+
+		this._body = lines.join(ObsidianFile.newline);
 	}
 
-	static async fetch(url) {
-		try {
-			const req = new Request(url);
-			req.timeoutInterval = 10;
-			const html = await req.loadString();
-			const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-			const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
-			const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
-			const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
-			const title = (ogTitle?.[1] || titleMatch?.[1] || '').trim();
-			const description = (ogDesc?.[1] || metaDesc?.[1] || '').trim();
-			return { title, description };
-		} catch (e) {
-			return { title: '', description: '' };
-		}
+	get header() {
+		return this._header;
 	}
 
-	static async create({ url = '', note = '' } = {}) {
-		const { title, description } = await EntryLink.fetch(url);
-		return new EntryLink({ url, title, description, note });
+	get body() {
+		return this._body;
 	}
 }
 
-// EntryLocation - wraps GPS + reverse-geocoded address data
+// Data/factory classes *******************************************************
+// EntryLocation: holds and formats location data
 class EntryLocation {
 	constructor(locationDict = {}) {
 		this.latitude = locationDict.latitude || '';
@@ -878,7 +812,7 @@ class EntryLocation {
 	get appleUrl() {
 		const applemaps = 'https://maps.apple.com/?ll=';
 		const latlong = `${this.latitude},${this.longitude}`;
-		const query = `${encodeURIComponent(this.label)}`;
+		const query = encodeURIComponent(this.label);
 		return `[${this.label}](${applemaps}${latlong}&q=${query})`;
 	}
 
@@ -901,7 +835,7 @@ class EntryLocation {
 				? `${place.subThoroughfare || ''} ${place.thoroughfare}`.trim() : '',
 			city: place.locality || '',
 			neighborhood: place.subLocality || '',
-			state: (place.postalAddress && place.postalAddress.state) || place.administrativeArea || '',
+			state: place.postalAddress.state || place.administrativeArea || '',
 			county: place.subAdministrativeArea || '',
 			country: place.country || '',
 			zip: place.postalCode || '',
@@ -911,34 +845,46 @@ class EntryLocation {
 	}
 }
 
-// EntryPhoto - renders as an H4 entry with a resized Obsidian image embed
-class EntryPhoto {
-	static DEFAULT_WIDTH = 400;
+// EntryLinkData: fetches URL metadata, used to construct a LinkEntry
+class EntryLinkData {
+	constructor({ url = '', title = '', description = '' } = {}) {
+		this.url = url;
+		this.title = title || url;
+		this.description = description;
+	}
 
-	constructor({ caption = '', filename = '', assetsFolder = '', width = EntryPhoto.DEFAULT_WIDTH } = {}) {
+	static async fetch(url) {
+		try {
+			const req = new Request(url);
+			req.timeoutInterval = 10;
+			const html = await req.loadString();
+			const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+			const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+			const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+			const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+			const title = (ogTitle?.[1] || titleMatch?.[1] || '').trim();
+			const description = (ogDesc?.[1] || metaDesc?.[1] || '').trim();
+			return { title, description };
+		} catch (e) {
+			return { title: '', description: '' };
+		}
+	}
+
+	static async create(url) {
+		const { title, description } = await EntryLinkData.fetch(url);
+		return new EntryLinkData({ url, title, description });
+	}
+}
+
+// EntryPhotoData: saves an image to the vault, used to construct a PhotoEntry
+class EntryPhotoData {
+	constructor({ caption = '', filename = '', assetsFolder = '' } = {}) {
 		this.caption = caption;
 		this.filename = filename;
 		this.assetsFolder = assetsFolder;
-		this.width = width;
 	}
 
-	// H4 header: "9:00 AM - Caption" or just "9:00 AM"
-	get header() {
-		const time = DateFormatter.toTime12Hour(new Date());
-		return this.caption ? `${time} — ${this.caption}` : time;
-	}
-
-	// Obsidian resized embed: ![[folder/file.jpg|400]]
-	get body() {
-		return `![[${this.assetsFolder}/${this.filename}|${this.width}]]`;
-	}
-
-	// Full entry markdown: H4 header + embed
-	toMarkdown() {
-		return `#### ${this.header}\n${this.body}`;
-	}
-
-	static async create({ caption = '', assetsFolder = '', bookmark = '', width = EntryPhoto.DEFAULT_WIDTH } = {}) {
+	static async create({ caption = '', assetsFolder = '', bookmark = '' } = {}) {
 		const image = args.images[0];
 		if (!image) throw new Error("No image provided");
 		const now = new Date();
@@ -952,23 +898,18 @@ class EntryPhoto {
 			ObsidianFile.ensureDirectory(fm, folderPath);
 		}
 		fm.write(fm.joinPath(folderPath, filename), Data.fromJPEG(image));
-		return new EntryPhoto({ caption, filename, assetsFolder, width });
+		return new EntryPhotoData({ caption, filename, assetsFolder });
 	}
 }
 
-// DailyNote - today's note, handles all entry types
+// DailyNote class ************************************************************
 class DailyNote extends ObsidianNote {
 
 	constructor(params = {}) {
 		if (!params.config) throw new Error("Config is required");
 		const config = params.config;
 		const bookmark = config.bookmark;
-		// Support nested config: config.dailyNotes.folder
-		// Falls back to flat config.dailyNotesFolder for backwards compatibility
-		const dailyNotes = config.dailyNotes || {};
-		const folder = ObsidianFile.normalizePath(
-			dailyNotes.folder || config.dailyNotesFolder
-		);
+		const folder = ObsidianFile.normalizePath(config.dailyNotesFolder);
 		super({
 			bookmark,
 			folder,
@@ -977,136 +918,93 @@ class DailyNote extends ObsidianNote {
 		this._params = params;
 	}
 
-	// Read the template file, substitute Templater placeholders with real values,
-	// and write the result as today's daily note.
-	_createFromTemplate(location) {
-		const config = this._params.config;
-		const dailyNotes = config.dailyNotes || {};
-		const templatePath = dailyNotes.template;
-
-		if (!templatePath) {
-			this._notify("ObsidianJS Error", "No template path in config.dailyNotes.template");
-			return false;
-		}
-
-		const fullPath = this.fm.joinPath(this.vaultPath, templatePath);
-		if (!this.fm.fileExists(fullPath)) {
-			this._notify("ObsidianJS Error", `Template not found: ${templatePath}`);
-			return false;
-		}
-
-		const iso = DateFormatter.toISO(new Date());
-		const time = DateFormatter.toTime24Hour(new Date());
-		const loc = (location && location.hasLocation)
-			? `${location.latitude},${location.longitude}`
-			: '';
-
-		let content = this.fm.readString(fullPath);
-		content = content.replace(
-			/<% tp\.date\.now\("YYYY-MM-DD HH:mm:ss"\) %>/g,
-			`${iso} ${time}`
-		);
-		content = content.replace(
-			/<% tp\.date\.now\("YYYY-MM-DD HH:mm"\) %>/g,
-			`${iso} ${time}`
-		);
-		content = content.replace(
-			/<% await tp\.user\.getLocation\(\) %>/g,
-			loc
-		);
-
-		this.write(content);
-		return true;
-	}
-
-	// Send an iOS notification when something goes wrong
-	_notify(title, body) {
-		const n = new Notification();
-		n.title = title;
-		n.body = body;
-		n.schedule();
-	}
-
 	async init() {
-		let location = null;
 		const isNew = !this.exists();
 
-		if (isNew || this._params.log) {
-			location = await EntryLocation.current();
-		}
-
 		if (isNew) {
-			const created = this._createFromTemplate(location);
-			if (!created) return this;
-			this._parsed = false; // Force re-parse after template write
+			const iso = DateFormatter.toISO(new Date());
+			const time = DateFormatter.toTime24Hour(new Date());
+			this.setFrontMatter({
+				created: `${iso} ${time}`,
+				tags: ["daily-notes"],
+				type: "note"
+			});
 		}
 
-		if (this._params.log) this.addLog(this._params.log, location);
+		if (this._params.log) {
+			this._addToNote(
+				new LogEntry({ text: this._params.log.text }),
+				this._params.log.section
+			);
+		}
+
+		if (this._params.checkin) {
+			const location = await EntryLocation.current();
+			// Also stamp location in frontmatter on first checkin of a new note
+			if (isNew && location.hasLocation) {
+				this.setFrontMatterProperty('location',
+					`${location.latitude},${location.longitude}`);
+			}
+			this._addToNote(
+				new CheckinEntry({
+					location,
+					note: this._params.checkin.note || ''
+				}),
+				this._params.checkin.section
+			);
+		}
 
 		if (this._params.photo) {
-			const assetsFolder = ObsidianFile.normalizePath(this._params.config.assetsFolder);
-			const width = this._params.photo.width
-				|| this._params.config.photoWidth
-				|| EntryPhoto.DEFAULT_WIDTH;
-			const photo = await EntryPhoto.create({
+			const assetsFolder = ObsidianFile.normalizePath(
+				this._params.config.assetsFolder
+			);
+			const photoData = await EntryPhotoData.create({
 				caption: this._params.photo.caption || '',
 				assetsFolder: assetsFolder || '',
-				bookmark: this._params.config.bookmark,
-				width: width
+				bookmark: this._params.config.bookmark
 			});
-			this.addPhoto(photo);
+			this._addToNote(
+				new PhotoEntry({
+					caption: photoData.caption,
+					filename: photoData.filename,
+					assetsFolder: photoData.assetsFolder
+				}),
+				this._params.photo.section
+			);
 		}
 
 		if (this._params.link) {
-			const link = await EntryLink.create({
-				url: this._params.link.url,
-				note: this._params.link.note || ''
-			});
-			this.addLink(link);
+			const linkData = await EntryLinkData.create(this._params.link.url);
+			this._addToNote(
+				new LinkEntry({
+					url: linkData.url,
+					title: linkData.title,
+					description: linkData.description
+				}),
+				this._params.link.section
+			);
 		}
 
 		return this;
 	}
 
-	// Add any entry to a named section.
-	// sectionHeader may include a # prefix (e.g. "## 🔗 Links") which determines
-	// the level used if the section needs to be created. The plain name is used
-	// for lookup. If no section is provided, content appends to end of note.
-	_addToSection(markdown, sectionHeader) {
-		if (!sectionHeader || !sectionHeader.trim()) {
+	// Append an entry to a named section.
+	// If the section exists: append the entry's markdown to it.
+	// If not: create the section at the bottom, then append.
+	// If no section specified: append to the bottom of the note.
+	_addToNote(entry, sectionName = null) {
+		const markdown = entry.toMarkdown();
+
+		if (sectionName) {
+			let section = this.sections.find(sectionName);
+			if (!section) {
+				section = this.sections.add(sectionName, ObsidianFile.nullstring, 2);
+			}
+			section.append(markdown);
+		} else {
+			// No section — append to the last section or create a root section
 			this.append(markdown);
-			return;
 		}
-		// Parse optional # prefix to determine level for section creation
-		const match = sectionHeader.match(/^(#{1,6})\s+(.+)$/);
-		const level = match ? match[1].length : 2;
-		const name = match ? match[2].trim() : sectionHeader.trim();
-		this.sections.appendToSection(name, markdown, level);
-	}
-
-	// Log entry: H4 header with time + optional location link, body is text
-	addLog(log = {}, location = null) {
-		const time = DateFormatter.toTime12Hour(new Date());
-		const loc = location && location.hasLocation;
-		const locationLink = loc ? ` — ${location.mapViewUrl}` : '';
-		const header = `#### ${time}${locationLink}`;
-		const markdown = log.text
-			? `${header}\n${log.text}`
-			: header;
-		const section = (this._params.log && this._params.log.section) || null;
-		this._addToSection(markdown, section);
-	}
-
-	// Photo entry: H4 header with time + caption, resized embed
-	addPhoto(photo) {
-		const section = (this._params.photo && this._params.photo.section) || null;
-		this._addToSection(photo.toMarkdown(), section);
-	}
-
-	// Link entry: task checkbox format, section must be supplied by caller
-	addLink(link) {
-		const section = (this._params.link && this._params.link.section) || null;
-		this._addToSection(link.toMarkdown(), section);
 	}
 }
 
@@ -1245,9 +1143,13 @@ const ObsidianJS = {
 	DateFormatter: DateFormatter,
 	DailyNote: DailyNote,
 	Entry: Entry,
-	EntryLink: EntryLink,
+	CheckinEntry: CheckinEntry,
+	LinkEntry: LinkEntry,
+	LogEntry: LogEntry,
+	PhotoEntry: PhotoEntry,
+	EntryLinkData: EntryLinkData,
 	EntryLocation: EntryLocation,
-	EntryPhoto: EntryPhoto,
+	EntryPhotoData: EntryPhotoData,
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
