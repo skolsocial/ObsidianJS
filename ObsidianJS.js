@@ -1050,8 +1050,17 @@ class DailyNote extends ObsidianNote {
 				this._params.link.section
 			);
 		}
+		
+		if (this._params.tracker) this.addTracker(this._params.tracker.tracker);
 
 		return this;
+	}
+	
+	addTracker(emoji) {
+  		this.parse();
+  		const existing = this._frontMatter.get('trackers') || [];
+  		this._frontMatter.set('trackers', [...existing, emoji]);
+  		this._markDirty();
 	}
 
 	_addToNote(entry, sectionName = null) {
