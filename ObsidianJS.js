@@ -394,7 +394,8 @@ class Section {
 		if (this.content) {
 			parts.push(this.content.trimEnd());
 		}
-		return parts.join(ObsidianFile.newline);
+		const result = parts.join(ObsidianFile.newline);
+		return this.level === 2 ? result + ObsidianFile.newline : result;
 	}
 
 	getSubsections(allSections) {
