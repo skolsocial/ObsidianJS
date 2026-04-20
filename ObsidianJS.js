@@ -909,7 +909,8 @@ class DailyNote extends ObsidianNote {
 		if (!params.config) throw new Error("Config is required");
 		const config = params.config;
 		const bookmark = config.bookmark;
-		const folder = ObsidianFile.normalizePath(config.dailyNotesFolder);
+		const dailyNotes = config.dailyNotes || {};
+		const folder = ObsidianFile.normalizePath(dailyNotes.folder || config.dailyNotesFolder || '');
 		super({
 			bookmark,
 			folder,
@@ -918,17 +919,62 @@ class DailyNote extends ObsidianNote {
 		this._params = params;
 	}
 
+	// Send an iOS notification when something goes wrong
+	_notify(title, body) {
+		const n = new Notification();
+		n.title = title;
+		n.body = body;
+		n.schedule();
+	}
+
+	// Read the template file, substitute Templater placeholders, and write today's note
+	_createFromTemplate(location) {
+		const dailyNotes = this._params.config.dailyNotes || {};
+		const templatePath = dailyNotes.template;
+
+		if (!templatePath) {
+			this._notify("ObsidianJS Error", "No template path in config.dailyNotes.template");
+			return false;
+		}
+
+		const fullPath = this.fm.joinPath(this.vaultPath, templatePath);
+		if (!this.fm.fileExists(fullPath)) {
+			this._notify("ObsidianJS Error", `Template not found: ${templatePath}`);
+			return false;
+		}
+
+		const iso = DateFormatter.toISO(new Date());
+		const time = DateFormatter.toTime24Hour(new Date());
+		const loc = (location && location.hasLocation)
+			? `${location.latitude},${location.longitude}`
+			: '';
+
+		let content = this.fm.readString(fullPath);
+		content = content.replace(
+			/<% tp\.date\.now\("YYYY-MM-DD HH:mm:ss"\) %>/g,
+			`${iso} ${time}`
+		);
+		content = content.replace(
+			/<% tp\.date\.now\("YYYY-MM-DD HH:mm"\) %>/g,
+			`${iso} ${time}`
+		);
+		content = content.replace(
+			/<% await tp\.user\.getLocation\(\) %>/g,
+			loc
+		);
+
+		this.write(content);
+		return true;
+	}
+
 	async init() {
 		const isNew = !this.exists();
 
 		if (isNew) {
-			const iso = DateFormatter.toISO(new Date());
-			const time = DateFormatter.toTime24Hour(new Date());
-			this.setFrontMatter({
-				created: `${iso} ${time}`,
-				tags: ["daily-notes"],
-				type: "note"
-			});
+			const location = await EntryLocation.current();
+			const created = this._createFromTemplate(location);
+			if (!created) return this;
+			this._parsed = false; // force re-parse after template write
 		}
 
 		if (this._params.log) {
