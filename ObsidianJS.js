@@ -249,13 +249,29 @@ class FrontMatter {
 		if (!yamlString.trim()) return {};
 		const data = {};
 		const lines = yamlString.split(ObsidianFile.newline);
+		let currentKey = null;
+
 		for (const line of lines) {
 			if (line.trim() === FrontMatter.lines || !line.trim()) continue;
+
+			// Block list item: "  - value"
+			if (line.match(/^\s+-\s+/) && currentKey) {
+				const item = line.replace(/^\s+-\s+/, '').trim();
+				if (!Array.isArray(data[currentKey])) data[currentKey] = [];
+				data[currentKey].push(item);
+				continue;
+			}
+
 			const colonIndex = line.indexOf(FrontMatter.colon);
 			if (colonIndex === -1) continue;
-			const key = line.substring(0, colonIndex).trim();
+
+			currentKey = line.substring(0, colonIndex).trim();
 			let value = line.substring(colonIndex + 1).trim();
-			if (
+
+			if (value === '') {
+				// Key with no value — expecting block list items next
+				data[currentKey] = [];
+			} else if (
 				value.startsWith(FrontMatter.leftsquarebracket) &&
 				value.endsWith(FrontMatter.rightsquarebracket)
 			) {
@@ -265,18 +281,19 @@ class FrontMatter {
 					.map((item) =>
 						item.trim().replace(/^["']|["']$/g, ObsidianFile.nullstring)
 					);
+				data[currentKey] = value;
 			} else if (
 				(value.startsWith(FrontMatter.doublequote) &&
 					value.endsWith(FrontMatter.doublequote)) ||
 				(value.startsWith(FrontMatter.singlequote) &&
 					value.endsWith(FrontMatter.singlequote))
 			) {
-				value = value.slice(1, -1);
-			} else if (value === FrontMatter.true_string) value = true;
-			else if (value === FrontMatter.false_string) value = false;
+				data[currentKey] = value.slice(1, -1);
+			} else if (value === FrontMatter.true_string) data[currentKey] = true;
+			else if (value === FrontMatter.false_string) data[currentKey] = false;
 			else if (!isNaN(value) && !isNaN(parseFloat(value)))
-				value = parseFloat(value);
-			data[key] = value;
+				data[currentKey] = parseFloat(value);
+			else data[currentKey] = value;
 		}
 		return data;
 	}
@@ -303,9 +320,10 @@ class FrontMatter {
 		const lines = [FrontMatter.lines];
 		for (const [key, value] of Object.entries(this.data)) {
 			if (Array.isArray(value)) {
-				lines.push(`${key}: [${value.map((v) => `"${v}"`).join(", ")}]`);
+				lines.push(`${key}:`);
+				value.forEach(v => lines.push(`  - ${v}`));
 			} else if (typeof value === "string") {
-				lines.push(`${key}: "${value}"`);
+				lines.push(`${key}: ${value}`);
 			} else {
 				lines.push(`${key}: ${value}`);
 			}
