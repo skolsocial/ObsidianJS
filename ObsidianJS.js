@@ -691,8 +691,8 @@ class Entry {
 class LogEntry extends Entry {
 	constructor({ text = '' } = {}) {
 		super();
-		const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 		const time = DateFormatter.toTime12Hour(new Date());
+		const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 		this._header = lines.length > 0 ? `${time} — ${lines[0]}` : time;
 		this._bullets = lines.slice(1);
 	}
@@ -1035,48 +1035,42 @@ class DailyNote extends ObsidianNote {
 		return this;
 	}
 
-	// Append an entry to a named section using raw string operations.
-	// Splits the file on the section header, appends to the bottom of that
-	// section, and rejoins. This avoids re-parsing issues with code blocks.
-	// If section not found: creates it at the bottom, then appends.
-	// If no section specified: appends to the bottom of the file.
 	_addToNote(entry, sectionName = null) {
-		const markdown = entry.toMarkdown();
-
-		// Save any in-memory changes first so we work with the full file
 		if (this._isDirty) this.save();
 
+		const markdown = entry.toMarkdown();
 		let content = this.read();
 
-		if (sectionName) {
-			// Build the section header line to search for (## Section Name)
-			const sectionHeader = `## ${sectionName}`;
-			const idx = content.indexOf(`\n${sectionHeader}`);
-
-			if (idx === -1) {
-				// Section not found — create it at the bottom and append
-				content = content.trimEnd() + `\n\n${sectionHeader}\n${markdown}`;
-			} else {
-				// Find the next ## section after this one (or end of file)
-				const afterHeader = idx + 1; // skip the leading \n
-				const nextSection = content.indexOf('\n## ', afterHeader + sectionHeader.length);
-				if (nextSection === -1) {
-					// This is the last section — append to end
-					content = content.trimEnd() + `\n${markdown}`;
-				} else {
-					// Insert before the next section
-					content = content.slice(0, nextSection).trimEnd()
-						+ `\n${markdown}`
-						+ content.slice(nextSection);
-				}
-			}
-		} else {
-			// No section — append to bottom
-			content = content.trimEnd() + `\n${markdown}`;
+		if (!sectionName) {
+			this.write(content.trimEnd() + `\n${markdown}`);
+			this._parsed = false;
+			return;
 		}
 
-		this.write(content);
-		this._parsed = false; // invalidate parse cache
+		// Determine header level from what was sent, default to ##
+		const levelMatch = sectionName.match(/^(#+)/);
+		const hashes = levelMatch ? levelMatch[1] : '##';
+		const sectionTarget = sectionName.trim();
+
+		// Split file on lines that start with exactly this header level
+		// Use a regex that matches lines beginning with exactly `hashes` but not more
+		const splitter = new RegExp(`(?=\\n${hashes}[^#])`, 'g');
+		const chunks = content.split(splitter);
+
+		const matchIndex = chunks.findIndex(chunk => {
+			const firstLine = chunk.split('\n').find(l => l.trim());
+			return firstLine && firstLine.trim() === sectionTarget;
+		});
+
+		if (matchIndex === -1) {
+			// Section not found — append new section at bottom
+			this.write(content.trimEnd() + `\n\n${sectionTarget}\n${markdown}`);
+		} else {
+			chunks[matchIndex] = chunks[matchIndex].trimEnd() + `\n${markdown}`;
+			this.write(chunks.join(''));
+		}
+
+		this._parsed = false;
 	}
 }
 
