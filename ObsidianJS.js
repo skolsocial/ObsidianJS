@@ -692,7 +692,8 @@ class LogEntry extends Entry {
 	constructor({ text = '' } = {}) {
 		super();
 		const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-		this._header = lines[0] || '';
+		const time = DateFormatter.toTime12Hour(new Date());
+		this._header = lines.length > 0 ? `${time} — ${lines[0]}` : time;
 		this._bullets = lines.slice(1);
 	}
 
