@@ -399,17 +399,17 @@ class Sections {
 		this._parent = parent;
 	}
 
-	// Find first section matching header name (case-insensitive)
+	// Find first section matching header name (exact match)
 	find(headerText) {
 		return this._sections.find(
-			(section) => section.header.toLowerCase() === headerText.toLowerCase()
+			(section) => section.header.trim() === headerText.trim()
 		);
 	}
 
-	// Find all sections matching header name
+	// Find all sections matching header name (exact match)
 	findAll(headerText) {
 		return this._sections.filter(
-			(section) => section.header.toLowerCase() === headerText.toLowerCase()
+			(section) => section.header.trim() === headerText.trim()
 		);
 	}
 
@@ -1034,23 +1034,48 @@ class DailyNote extends ObsidianNote {
 		return this;
 	}
 
-	// Append an entry to a named section.
-	// If the section exists: append the entry's markdown to it.
-	// If not: create the section at the bottom, then append.
-	// If no section specified: append to the bottom of the note.
+	// Append an entry to a named section using raw string operations.
+	// Splits the file on the section header, appends to the bottom of that
+	// section, and rejoins. This avoids re-parsing issues with code blocks.
+	// If section not found: creates it at the bottom, then appends.
+	// If no section specified: appends to the bottom of the file.
 	_addToNote(entry, sectionName = null) {
 		const markdown = entry.toMarkdown();
 
+		// Save any in-memory changes first so we work with the full file
+		if (this._isDirty) this.save();
+
+		let content = this.read();
+
 		if (sectionName) {
-			let section = this.sections.find(sectionName);
-			if (!section) {
-				section = this.sections.add(sectionName, ObsidianFile.nullstring, 2);
+			// Build the section header line to search for (## Section Name)
+			const sectionHeader = `## ${sectionName}`;
+			const idx = content.indexOf(`\n${sectionHeader}`);
+
+			if (idx === -1) {
+				// Section not found — create it at the bottom and append
+				content = content.trimEnd() + `\n\n${sectionHeader}\n${markdown}`;
+			} else {
+				// Find the next ## section after this one (or end of file)
+				const afterHeader = idx + 1; // skip the leading \n
+				const nextSection = content.indexOf('\n## ', afterHeader + sectionHeader.length);
+				if (nextSection === -1) {
+					// This is the last section — append to end
+					content = content.trimEnd() + `\n${markdown}`;
+				} else {
+					// Insert before the next section
+					content = content.slice(0, nextSection).trimEnd()
+						+ `\n${markdown}`
+						+ content.slice(nextSection);
+				}
 			}
-			section.append(markdown);
 		} else {
-			// No section — append to the last section or create a root section
-			this.append(markdown);
+			// No section — append to bottom
+			content = content.trimEnd() + `\n${markdown}`;
 		}
+
+		this.write(content);
+		this._parsed = false; // invalidate parse cache
 	}
 }
 
