@@ -938,6 +938,13 @@ class DailyNote extends ObsidianNote {
 		});
 		this._params = params;
 	}
+	
+	// Reads emoji and 
+	_extractTracker(text) {
+  		if (!text) return null;
+  		const match = text.match(/^(\p{Emoji_Presentation}[\p{Emoji}\uFE0F\u200D]*\s*)+/u);
+  		return match ? match[0].trim() : null;
+	}
 
 	// Send an iOS notification when something goes wrong
 	_notify(title, body) {
@@ -1051,7 +1058,9 @@ class DailyNote extends ObsidianNote {
 			);
 		}
 		
-		if (this._params.tracker) this.addTracker(this._params.tracker.tracker);
+		const extractedTracker = this._extractTracker(this._params.log?.text);
+		const tracker = extractedTracker || (this._params.tracker || null);
+		if (tracker) this.addTracker(tracker);
 
 		return this;
 	}
