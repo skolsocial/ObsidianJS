@@ -387,15 +387,15 @@ class Section {
 	}
 
 	toString() {
-		const parts = [];
-		if (this.header) {
-			parts.push(this.headerMarkdown);
-		}
-		if (this.content) {
-			parts.push(this.content.trimEnd());
-		}
-		const result = parts.join(ObsidianFile.newline);
-		return this.level === 2 ? result + ObsidianFile.newline : result;
+    		const parts = [];
+    		if (this.header) {
+        		parts.push(this.headerMarkdown);
+    		}
+    		if (this.content) {
+        		parts.push(this.content.trimEnd());
+    		}
+    		const result = parts.join(ObsidianFile.newline);
+    		return result;
 	}
 
 	getSubsections(allSections) {
@@ -640,14 +640,16 @@ class ObsidianNote extends ObsidianFile {
 	save() {
 		this.parse();
 		const parts = [];
+		
 		if (this._frontMatter.exists()) {
 			parts.push(this._frontMatter.toString());
 		}
 		for (const section of this._sections) {
-			parts.push(section.toString());
-		}
-		this.write(parts.join(ObsidianFile.newline));
-		this._markDirty(false);
+        		const needsBlankLine = section.level === 2 && parts.length > 0;
+        		parts.push((needsBlankLine ? ObsidianFile.newline : '') + section.toString());
+    		}
+    		this.write(parts.join(ObsidianFile.newline));
+    		this._markDirty(false);
 	}
 
 	_markDirty(dirty = true) {
@@ -1005,10 +1007,13 @@ class DailyNote extends ObsidianNote {
 		}
 
 		if (this._params.log) {
+			const logText = this._params.log.text;
 			this._addToNote(
-				new LogEntry({ text: this._params.log.text }),
+				new LogEntry({ text: logText }),
 				this._params.log.section
 			);
+			const tracker = this._extractTracker(logText);
+			if (tracker) this.addTracker(tracker);
 		}
 
 		if (this._params.checkin) {
@@ -1058,9 +1063,8 @@ class DailyNote extends ObsidianNote {
 			);
 		}
 		
-		const extractedTracker = this._extractTracker(this._params.log?.text);
-		const tracker = extractedTracker || (this._params.tracker || null);
-		if (tracker) this.addTracker(tracker);
+		if (this._params.tracker)
+			this.addTracker(this._params.tracker.tracker);
 
 		return this;
 	}
@@ -1069,12 +1073,10 @@ class DailyNote extends ObsidianNote {
   		this.parse();
   		const existing = this._frontMatter.get('trackers') || [];
   		this._frontMatter.set('trackers', [...existing, emoji]);
-  		this._markDirty();
+  		this.save();
 	}
 
 	_addToNote(entry, sectionName = null) {
-		if (this._isDirty) this.save();
-
 		const markdown = entry.toMarkdown();
 		let content = this.read();
 
