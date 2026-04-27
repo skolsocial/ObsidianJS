@@ -23,7 +23,7 @@ const payload = { config };
 payload[type] = input;
 
 const note = await new ojs.DailyNote(payload).init();
-note.save();
+// note.save();
 
 console.log(JSON.stringify(payload));
 
