@@ -1315,14 +1315,19 @@ const ObsidianJS = {
 
 module.exports = ObsidianJS;
 
-// Runner - only executes when called directly from Shortcuts via Scriptable
+// Runner - only executes when called directly from 
+// Shortcuts via Scriptable
 if (typeof args !== 'undefined' && args.shortcutParameter) {
     const input = args.shortcutParameter || {};
-    const config = ObsidianConfig.load();
-    const payload = { config };
-    payload[input.type] = input;
 
-    await new DailyNote(payload).init();
+    if (input.type !== "setup") {
+        const config = ObsidianConfig.load();
+        const payload = { config };
+        payload[input.type] = input;
+        await new DailyNote(payload).init();
+    } else {
+        ObsidianConfig.setup(input.scriptable_bookmark, input.configPath);
+    }
 
     Script.setShortcutOutput("OK");
     Script.complete();
