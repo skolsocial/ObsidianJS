@@ -5,12 +5,6 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: deep-blue; icon-glyph: magic;
 
-// Config *********************************************************************
-const ObsidianConfig = {
-  dailyNotesFolder: "Daily Notes",
-  bookmark: "obsidian_vault"
-};
-
 // static utility imports *****************************************************
 const CalendarJS = globalThis.Calendar;
 
@@ -105,6 +99,23 @@ class DateFormatter {
 		end.setHours(23, 59, 59, 999);
 		return end;
 	}
+	// Resolve date tokens in a string: {YYYY}, {MM}, {Month}, {DD}, {Day}
+	static resolveTokens(str, date = new Date()) {
+    		date = DateFormatter.parseDate(date);
+    		if (!date) return str;
+    		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    		const day = date.getDate().toString().padStart(2, '0');
+    		const monthName = date.toLocaleDateString('en-US', 
+			{ month: 'long' });
+    		const dayName = date.toLocaleDateString('en-US', 
+			{ weekday: 'long' });
+    return str
+        .replace(/\{YYYY\}/g, date.getFullYear())
+        .replace(/\{MM\}/g, month)
+        .replace(/\{Month\}/g, monthName)
+        .replace(/\{DD\}/g, day)
+        .replace(/\{Day\}/g, dayName);
+	}
 }
 
 // Tags class - central tag handling for both FrontMatter and Tasks
@@ -198,12 +209,7 @@ class ObsidianFile {
 	write(content) {
 		this.fm.writeString(this.filePath, content);
 	}
-
-	append(content) {
-		let existing = this.read();
-		this.write([existing, content].join(ObsidianFile.newline));
-	}
-
+	
 	getLines() {
 		return this.read().split(ObsidianFile.newline);
 	}
@@ -1240,6 +1246,49 @@ class ObsidianCalendar {
 	}
 }
 
+// ObsidianConfig class - manages keychain bootstrap and config loading
+class ObsidianConfig {
+
+    static keychainKey = "ObsidianJS";
+
+    // One-time setup — writes bootstrap values to keychain
+    static setup(scriptable_bookmark, configPath) {
+        Keychain.set(ObsidianConfig.keychainKey, JSON.stringify({
+            scriptable_bookmark,
+            configPath
+        }));
+    }
+
+    // Read bootstrap values from keychain
+    static readKeychain() {
+        if (!Keychain.contains(ObsidianConfig.keychainKey)) {
+            throw new Error("ObsidianJS keychain entry not found. Please run setup.");
+        }
+        return JSON.parse(Keychain.get(ObsidianConfig.keychainKey));
+    }
+
+    // Load config from vault, resolve date tokens
+    static load() {
+        const { scriptable_bookmark, configPath } = ObsidianConfig.readKeychain();
+
+        const fm = FileManager.local();
+        const vaultPath = fm.bookmarkedPath(scriptable_bookmark);
+        const fullPath = fm.joinPath(vaultPath, configPath);
+
+        if (!fm.fileExists(fullPath)) {
+            throw new Error(`ObsidianJS config not found at: ${configPath}`);
+        }
+
+        let raw = fm.readString(fullPath);
+        raw = DateFormatter.resolveTokens(raw, new Date());
+        const config = JSON.parse(raw);
+
+        config.bookmark = scriptable_bookmark;
+        return config;
+    }
+}
+
+
 // Namespace and export *******************************************************
 const ObsidianJS = {
 	Calendar: ObsidianCalendar,
@@ -1265,3 +1314,16 @@ const ObsidianJS = {
 };
 
 module.exports = ObsidianJS;
+
+// Runner - only executes when called directly from Shortcuts via Scriptable
+if (typeof args !== 'undefined' && args.shortcutParameter) {
+    const input = args.shortcutParameter || {};
+    const config = ObsidianConfig.load();
+    const payload = { config };
+    payload[input.type] = input;
+
+    await new DailyNote(payload).init();
+
+    Script.setShortcutOutput("OK");
+    Script.complete();
+}

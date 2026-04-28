@@ -4,28 +4,43 @@
 const ojs = importModule("ObsidianJS");
 const input = args.shortcutParameter || {};
 
-// build config
-const now = new Date();
-const year = now.getFullYear();
-const month = String(now.getMonth() + 1).padStart(2, '0');
-const monthName = ojs.DateFormatter.toDisplayDate(now).split(' ')[0];
-const config = {
-  bookmark: "obsidian_vault",
-  dailyNotes: {
-  folder: "Daily Notes",
-  template: "Obsidian/Templates/Daily Note.md"
-  },
-  assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`
-};
-// route by type
-const type = input.type;
+const config = ojs.Config.load();
 const payload = { config };
-payload[type] = input;
+payload[input.type] = input;
 
 const note = await new ojs.DailyNote(payload).init();
-// note.save();
 
 console.log(JSON.stringify(payload));
 
 Script.setShortcutOutput("OK");
 Script.complete();
+
+// -- old code --
+//const ojs = importModule("ObsidianJS");
+//const input = args.shortcutParameter || {};
+//
+// build config
+//const now = new Date();
+//const year = now.getFullYear();
+//const month = String(now.getMonth() + 1).padStart(2, '0');
+//const monthName = ojs.DateFormatter.toDisplayDate(now).split(' ')[0];
+//const config = {
+//  bookmark: "obsidian_vault",
+//  dailyNotes: {
+//  folder: "Daily Notes",
+//  template: "Obsidian/Templates/Daily Note.md"
+//  },
+//  assetsFolder: `Daily Notes/${year}/${month} ${monthName}/assets`
+//};
+// route by type
+//const type = input.type;
+//const payload = { config };
+//payload[type] = input;
+//
+//const note = await new ojs.DailyNote(payload).init();
+// note.save();
+//
+//console.log(JSON.stringify(payload));
+//
+//Script.setShortcutOutput("OK");
+//Script.complete();
