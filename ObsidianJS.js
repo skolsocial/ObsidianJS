@@ -1252,9 +1252,9 @@ class ObsidianConfig {
     static keychainKey = "ObsidianJS";
 
     // One-time setup — writes bootstrap values to keychain
-    static setup(scriptable_bookmark, configPath) {
+    static setup(scriptableBookmark, configPath) {
         Keychain.set(ObsidianConfig.keychainKey, JSON.stringify({
-            scriptable_bookmark,
+            scriptableBookmark,
             configPath
         }));
     }
@@ -1269,10 +1269,10 @@ class ObsidianConfig {
 
     // Load config from vault, resolve date tokens
     static load() {
-        const { scriptable_bookmark, configPath } = ObsidianConfig.readKeychain();
+        const { scriptableBookmark, configPath } = ObsidianConfig.readKeychain();
 
         const fm = FileManager.local();
-        const vaultPath = fm.bookmarkedPath(scriptable_bookmark);
+        const vaultPath = fm.bookmarkedPath(scriptableBookmark);
         const fullPath = fm.joinPath(vaultPath, configPath);
 
         if (!fm.fileExists(fullPath)) {
@@ -1283,7 +1283,7 @@ class ObsidianConfig {
         raw = DateFormatter.resolveTokens(raw, new Date());
         const config = JSON.parse(raw);
 
-        config.bookmark = scriptable_bookmark;
+        config.bookmark = scriptableBookmark;
         return config;
     }
 }
@@ -1320,15 +1320,19 @@ module.exports = ObsidianJS;
 if (typeof args !== 'undefined' && args.shortcutParameter) {
     const input = args.shortcutParameter || {};
 
-    if (input.type !== "setup") {
-        const config = ObsidianConfig.load();
-        const payload = { config };
-        payload[input.type] = input;
-        await new DailyNote(payload).init();
-    } else {
-        ObsidianConfig.setup(input.scriptable_bookmark, input.configPath);
-    }
-
-    Script.setShortcutOutput("OK");
-    Script.complete();
+    (async () => {
+        if (input.type !== "setup") {
+            const config = ObsidianConfig.load();
+            const payload = { config };
+            payload[input.type] = input;
+            await new DailyNote(payload).init();
+        } else {
+            ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
+        }
+		Script.setShortcutOutput("OK");
+    		Script.complete();
+    })();
 }
+
+
+
