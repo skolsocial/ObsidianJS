@@ -773,28 +773,32 @@ class PhotoEntry extends Entry {
 
 // LinkEntry: timestamp + page title as header, checkbox + cardlink block as body
 class LinkEntry extends Entry {
-	constructor({ url = '', title = '', description = '' } = {}) {
-		super();
-		const time = DateFormatter.toTime12Hour(new Date());
-		const displayTitle = title || url;
-		this._header = `${time} — ${displayTitle}`;
+	constructor({ url = '', title = '', description = '', 
+		favicon = '', image = '' } = {}) {
+    		super();
+    		const time = DateFormatter.toTime12Hour(new Date());
+    		const displayTitle = title || url;
+    		this._header = `${time} — ${displayTitle}`;
 
-		const host = (() => {
-			try { return new URL(url).hostname; } catch(e) { return ''; }
-		})();
+    		const host = (() => {
+        		try { return new URL(url).hostname; } catch(e) { return ''; }
+    		})();
 
-		const lines = [];
-		lines.push(`- [ ] [${displayTitle}](${url})`);
-		lines.push('');
-		lines.push('```cardlink');
-		lines.push(`url: ${url}`);
-		lines.push(`title: "${displayTitle}"`);
-		if (description) lines.push(`description: "${description}"`);
-		if (host) lines.push(`host: ${host}`);
-		lines.push('```');
+    		const lines = [];
+    		lines.push(`- [ ] [${displayTitle}](${url})`);
+    		lines.push('');
+    		lines.push('```cardlink');
+    		lines.push(`url: ${url}`);
+    		lines.push(`title: "${displayTitle}"`);
+    		if (description) lines.push(`description: "${description}"`);
+    		if (host) lines.push(`host: ${host}`);
+    		if (favicon) lines.push(`favicon: ${favicon}`);
+    		if (image) lines.push(`image: ${image}`);
+    		lines.push('```');
 
-		this._body = lines.join(ObsidianFile.newline);
+    		this._body = lines.join(ObsidianFile.newline);
 	}
+
 
 	get header() {
 		return this._header;
@@ -874,34 +878,53 @@ class EntryLocation {
 }
 
 // EntryLinkData: fetches URL metadata, used to construct a LinkEntry
-class EntryLinkData {
-	constructor({ url = '', title = '', description = '' } = {}) {
-		this.url = url;
-		this.title = title || url;
-		this.description = description;
+	class EntryLinkData {
+		constructor({ url = '', title = '', description = '', 
+			favicon = '', image = '' } = {}) {
+    		this.url = url;
+    		this.title = title || url;
+    		this.description = description;
+    		this.favicon = favicon;
+    		this.image = image;
 	}
 
 	static async fetch(url) {
-		try {
-			const req = new Request(url);
-			req.timeoutInterval = 10;
-			const html = await req.loadString();
-			const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-			const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
-			const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
-			const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
-			const title = (ogTitle?.[1] || titleMatch?.[1] || '').trim();
-			const description = (ogDesc?.[1] || metaDesc?.[1] || '').trim();
-			return { title, description };
-		} catch (e) {
-			return { title: '', description: '' };
-		}
+    		try {
+        		const req = new Request(url);
+        		req.timeoutInterval = 10;
+        		const html = await req.loadString();
+
+        		const decode = str => str
+            		.replace(/&quot;/g, '"')
+            		.replace(/&amp;/g, '&')
+            		.replace(/&#39;/g, "'")
+            		.replace(/&lt;/g, '<')
+            		.replace(/&gt;/g, '>');
+
+        		const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        		const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+        		const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+        		const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+        		const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+        		const faviconMatch = html.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i);
+
+        		const title = decode((ogTitle?.[1] || titleMatch?.[1] || '').trim());
+        		const description = decode((ogDesc?.[1] || metaDesc?.[1] || '').trim());
+        		const image = ogImage?.[1] || '';
+        		const favicon = faviconMatch?.[1] || '';
+
+        		return { title, description, image, favicon };
+    		} catch (e) {
+        		return { title: '', description: '', image: '', favicon: '' };
+    		}
 	}
 
 	static async create(url) {
-		const { title, description } = await EntryLinkData.fetch(url);
-		return new EntryLinkData({ url, title, description });
+    const { title, description, image, favicon } 
+		= await EntryLinkData.fetch(url);
+    return new EntryLinkData({ url, title, description, image, favicon });
 	}
+
 }
 
 // EntryPhotoData: saves an image to the vault, used to construct a PhotoEntry
@@ -1002,7 +1025,7 @@ class DailyNote extends ObsidianNote {
 		return true;
 	}
 
-	async init() {
+	async run() {
 		const isNew = !this.exists();
 
 		if (isNew) {
@@ -1024,7 +1047,8 @@ class DailyNote extends ObsidianNote {
 
 		if (this._params.checkin) {
 			const location = await EntryLocation.current();
-			// Also stamp location in frontmatter on first checkin of a new note
+			// Also stamp location in frontmatter on first 
+			// checkin of a new note
 			if (isNew && location.hasLocation) {
 				this.setFrontMatterProperty('location',
 					`${location.latitude},${location.longitude}`);
@@ -1058,16 +1082,20 @@ class DailyNote extends ObsidianNote {
 		}
 
 		if (this._params.link) {
-			const linkData = await EntryLinkData.create(this._params.link.url);
-			this._addToNote(
-				new LinkEntry({
-					url: linkData.url,
-					title: linkData.title,
-					description: linkData.description
-				}),
-				this._params.link.section
-			);
+    			const linkData = 
+				await EntryLinkData.create(this._params.link.url);
+    			this._addToNote(
+        			new LinkEntry({
+            			url: linkData.url,
+            			title: linkData.title,
+            			description: linkData.description,
+            			favicon: linkData.favicon,
+            			image: linkData.image
+        			}),
+        			this._params.link.section
+    			);
 		}
+
 		
 		if (this._params.tracker)
 			this.addTracker(this._params.tracker.tracker);
@@ -1325,7 +1353,7 @@ if (typeof args !== 'undefined' && args.shortcutParameter) {
             const config = ObsidianConfig.load();
             const payload = { config };
             payload[input.type] = input;
-            await new DailyNote(payload).init();
+            await new DailyNote(payload).run();
         } else {
             ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
         }
