@@ -683,6 +683,36 @@ class ObsidianNote extends ObsidianFile {
 	}
 }
 
+class QuickNote extends ObsidianNote {
+	constructor({entry, section, config}) {
+		const now = new Date();
+		const date = DateFormatter.toISO(now);
+		const time = DateFormatter.toTime24Hour(now).replace(':', '');
+		const seconds = now.getSeconds().toString().padStart(2, '0');
+		const filename = `${date}-${time}${seconds}.md`;
+		const folder = ObsidianFile.normalizePath(config.quick);
+	
+		super({bookmark: config.bookmark, folder, filename})
+	
+		this._entry = entry;
+		this._section = section;
+		this._config = config;
+		this._created = now;
+	}
+
+	save() {
+		this.setFrontMatter({
+			created: `${DateFormatter.toISO(this._created)} ${DateFormatter.toTime24Hour(this._created)}`,
+			type: this._entry.constructor.name.replace('Entry', '').toLowerCase(),
+			section: this._section,
+			status: 'pending',
+			'daily-note': `[[${DateFormatter.toISO(this._created)}.md]]`
+		});
+		this.append(this._entry.toMarkdown());
+		super.save();
+	}
+}
+
 // Entry classes **************************************************************
 // Entry: base class for all note entries.
 // All entries render as an H4 header + body text.
@@ -1027,6 +1057,17 @@ class DailyNote extends ObsidianNote {
 	}
 
 	async run() {
+		if (this._params.quick) {
+			const type = Object.keys(this._params).find(k =>
+				['log', 'checkin', 'photo', 'link'].includes(k));
+			if(!type) return this;
+			
+			const entry = this._buildEntry(type);
+			const section = this._params[type].section;
+			new QuickNote({entry, section, config: this._params.config}).save();
+			return this;
+		}
+		
 		const isNew = !this.exists();
 
 		if (isNew) {
