@@ -1391,14 +1391,23 @@ if (typeof args !== 'undefined' && args.shortcutParameter) {
     const input = args.shortcutParameter || {};
 
     (async () => {
-        if (input.type !== "setup") {
-            const config = ObsidianConfig.load();
-            const payload = { config };
-            payload[input.type] = input;
-            await new DailyNote(payload).run();
-        } else {
-            ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
-        }
+        if (input.type === "setup") {
+			ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
+			Script.setShortcutOutput("OK");
+			Script.completet();
+			return;
+		}
+		
+        const config = ObsidianConfig.load();
+		const payload = { config };
+		payload[input.type] = input;
+		
+		if (input.quick) {
+			await new QuickNote(payload).run();
+		} else {
+			await new DailyNote(payload).run();
+		}
+		
 		Script.setShortcutOutput("OK");
     		Script.complete();
     })();
