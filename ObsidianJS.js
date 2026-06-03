@@ -196,6 +196,12 @@ class ObsidianFile {
 		this.fileName = filename;
 		this.filePath = this.fm.joinPath(this.folderPath, this.fileName);
 	}
+	
+	delete() {
+		if (this.exists()) {
+			this.fm.remove(this.filePath);
+		}
+	}
 
 	exists() {
 		return this.fm.fileExists(this.filePath);
@@ -216,6 +222,13 @@ class ObsidianFile {
 
 	saveLines(lines) {
 		this.write(lines.join(ObsidianFile.newline));
+	}
+	
+	listFiles(extension = '.md') {
+		if (!this.fm.fileExists(this.folderPath)) return [];
+		return this.fm.listContents(this.folderPath)
+			.filter(f => f.endsWith(extension))
+			.map(f => this.fm.joinPath(this.folderPath, f))
 	}
 
 	static normalizePath(path) {
@@ -684,7 +697,8 @@ class ObsidianNote extends ObsidianFile {
 }
 
 class QuickNote extends ObsidianNote {
-	constructor({entry, section, config}) {
+	constructor(params = {}) {
+		const config = params.config;
 		const now = new Date();
 		const date = DateFormatter.toISO(now);
 		const time = DateFormatter.toTime24Hour(now).replace(':', '');
@@ -694,23 +708,181 @@ class QuickNote extends ObsidianNote {
 	
 		super({bookmark: config.bookmark, folder, filename})
 	
-		this._entry = entry;
-		this._section = section;
+		this._params = params;
 		this._config = config;
 		this._created = now;
 	}
-
-	save() {
-		this.setFrontMatter({
-			created: `${DateFormatter.toISO(this._created)} ${DateFormatter.toTime24Hour(this._created)}`,
-			type: this._entry.constructor.name.replace('Entry', '').toLowerCase(),
-			section: this._section,
-			status: 'pending',
-			'daily-note': `[[${DateFormatter.toISO(this._created)}.md]]`
-		});
-		this.append(this._entry.toMarkdown());
-		super.save();
+	
+	async run() {
+		if (this._params.log) {
+			const logText = this._params.log.text;
+			const entry = new LogEntry({ text: logText });
+			const section = this._params.log.section;
+			this._writeQuickNote(entry.toMarkdown(), section, 'log');
+		}
+		
+		if (this._params.checkin) {
+			const location = await EntryLocation.current();
+			const entry = new CheckinEntry({
+				location,
+				note: this._params.checkin.note || ''
+			});
+			const section = this._params.checkin.section;
+			this._writeQuickNote(entry.toMarkdown(), section, 'checkin');
+		}
+		
+		if (this._params.photo) {
+			const assetsFolder = ObsidianFile.normalizePath(
+				this._params.config.assetsFolder
+			);
+			const photoData = await EntryPhotoData.create({
+				caption: this._params.photo.caption || '',
+				assetsFolder: assetsFolder || '',
+				bookmark: this._params.config.bookmark
+			});
+			const entry = new PhotoEntry({
+				caption: photoData.caption,
+				filename: photoData.filename,
+				assetsFolder: photoData.assetsFolder
+			});
+			const section = this._params.photo.section;
+			this._writeQuickNote(entry.toMarkdown(), section, 'photo');
+		}
+		
+		if (this._params.link) {
+			const linkData = await EntryLinkData.create(this._params.link.url);
+			const entry = new LinkEntry({
+				url: linkData.url,
+				title: linkData.title,
+				description: linkData.description,
+				favicon: linkData.favicon,
+				image: linkData.image
+			});
+			const section = this._params.link.section;
+			this._writeQuickNote(entry.toMarkdown(), section, 'link');
+		}
+		if (this._params.tracker) {
+			this._writeQuickNote(
+				this._params.tracker.tracker,
+				'',
+				'tracker'
+			);
+		}
+		return this;
 	}
+	
+	_writeQuickNote(content, section, type) {
+		const date = DateFormatter.toISO(this._created);
+		const time = DateFormatter.toTime24Hour(this._created) 
+		this.setFrontMatter({
+			created: `${date} ${time}`,
+			type,
+			section: section || '',
+			status: 'pending',
+			'daily-note': `"[[${date}.md]]""`
+		});
+		this.append(content);
+		this.save();
+	}
+}
+
+class QuickNoteAssembler {
+	constructor(config) {
+		this._config = config;
+		this._folder = new ObsidianFile({
+			bookmark: config.bookmark,
+			folder: ObsidianFile.normalizePath(config.quick),
+			filename: ''
+		});
+	}
+	async run() {
+		const paths = this.folder.listFiles();
+		if (paths.length === 0) return this;
+		
+		const notes = paths.map(path => {
+			const filename = path.split('/').pop();
+			return new ObsidianNote({
+				bookmark: this._config.bookmark,
+				folder: OBsidianFile.normalizePath(this._config.quick),
+				filename
+			});
+		});
+		
+		// delete completed notes
+		this._deleteComplete(notes);
+		
+		// get pending notes
+		const pending = notes.filter(note =>
+			note.frontMatter.get('status') === 'pending'
+		);
+		if (pending.length === 0) return this;
+		
+		// group by daily note
+		const groups = this._groupByDailyNote(pending);
+		
+		// assemble each group
+		for (const [dailyNoteRef, quickNotes] of Object.entries(groups)) {
+			await this._assembleGroup(dailyNoteRef, quickNotes);
+		}
+		return this;
+	}
+	
+	_deleteComplete(notes){
+		for (const note of notes) {
+			if (note.frontMatter.get('status') === 'complete') {
+				note.delete();
+			}
+		}
+	}
+	
+	_groupByDailyNote(notes) {
+		const groups = {};
+		for (const note of notes) {
+			const dailyNote = note.frontMatter.get('daily-note');
+			if (!groups[dailyNote]) groups[dailyNote] = [];
+			groups[dailyNote].push(note);
+		}
+		return groups;
+	}
+	
+	async _assembleGroup(dailyNoteRef, quickNotes) {
+		const date = dailyNoteRef.replace(/[\[\]"]/g, '').replace('.md', '');
+		
+		const dailyNote = new DailyNote({
+			config: this._config,
+			date: new Date(date)
+		});
+		
+		if (!dailyNote.exists()) {
+			const location = await EntryLocation.current();
+			dailyNote._createFromTemplate(location);
+			dailyNote._parsed = false;
+		}
+		
+		// Group quick notes by section
+		const bySectionName = {};
+		for (const qn of quickNotes) {
+			const type = qn.fontMatter.get('type');
+			
+			if (type === 'tracker') {
+				const emoji = qn.read.split('\n').find(l => l.trim());
+				dailyNote.addTracker(emoji);
+				qn.setFrontMatterProperty('status', 'complete');
+				qn.save();
+				continue;
+			}
+			
+			const section = qn.frontMatter.get('section');
+			if (!bySectionName[section]) bySectionName[section] = [];
+			bySectionName[section].push(qn);
+		}
+		
+		// assemble each section
+		for (const [sectionName, sectionNotes] of Object.entries(bySectionName)) {
+			await this._assembleSection(dailyNote, sectionName, sectionNotes);
+		}
+	}
+	
 }
 
 // Entry classes **************************************************************
@@ -996,7 +1168,7 @@ class DailyNote extends ObsidianNote {
 		super({
 			bookmark,
 			folder,
-			filename: DateFormatter.toFilename(new Date()) + ".md"
+			filename: DateFormatter.toFilename(params.date || new Date()) + ".md"
 		});
 		this._params = params;
 	}
@@ -1377,6 +1549,7 @@ const ObsidianJS = {
 	File: ObsidianFile,
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
+	QuickNote: QuickNote,
 	Section: Section,
 	Sections: Sections,
 	Tags: Tags,
@@ -1394,7 +1567,7 @@ if (typeof args !== 'undefined' && args.shortcutParameter) {
         if (input.type === "setup") {
 			ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
 			Script.setShortcutOutput("OK");
-			Script.completet();
+			Script.complete();
 			return;
 		}
 		
@@ -1402,7 +1575,7 @@ if (typeof args !== 'undefined' && args.shortcutParameter) {
 		const payload = { config };
 		payload[input.type] = input;
 		
-		if (input.quick) {
+		if (String(input.quick).toLowerCase() === "true") {
 			await new QuickNote(payload).run();
 		} else {
 			await new DailyNote(payload).run();
