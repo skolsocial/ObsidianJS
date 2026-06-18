@@ -11,6 +11,18 @@ const CalendarJS = globalThis.Calendar;
 // Utility classes ************************************************************
 // DateFormatter class for consistent date/time formatting
 class DateFormatter {
+	
+	// Parse header time for sorting
+	static parseHeaderTime(headerLine) {
+		const match = headerLine.match(/(\d+):(\d+)\s+(AM|PM)/);
+		if(!match) return null;
+		let hours = parseInt(match[1]);
+		const minutes = parseInt(match[2]);
+		const ampm = match[3];
+		if (ampm === 'PM' && hours !== 12) hours += 12;
+		if (ampm === 'AM' && hours === 12) hours = 0;
+		return hours * 60 + minutes;
+	}
 
 	// Parse a date string or return Date object as-is
 	static parseDate(input) {
@@ -342,7 +354,8 @@ class FrontMatter {
 				lines.push(`${key}:`);
 				value.forEach(v => lines.push(`  - ${v}`));
 			} else if (typeof value === "string") {
-				lines.push(`${key}: ${value}`);
+    				const needsQuotes = value.startsWith('#') || value.startsWith('[');
+    				lines.push(`${key}: ${needsQuotes ? '"' + value + '"' : value}`);
 			} else {
 				lines.push(`${key}: ${value}`);
 			}
@@ -773,13 +786,14 @@ class QuickNote extends ObsidianNote {
 	
 	_writeQuickNote(content, section, type) {
 		const date = DateFormatter.toISO(this._created);
-		const time = DateFormatter.toTime24Hour(this._created) 
+		const time = DateFormatter.toTime24Hour(this._created);
+		const seconds = this._created.getSeconds().toString().padStart(2, '0');
 		this.setFrontMatter({
-			created: `${date} ${time}`,
+			created: `${date} ${time}:${seconds}`,
 			type,
 			section: section || '',
-			status: 'pending',
-			'daily-note': `"[[${date}.md]]""`
+			'daily-note': `[[${date}.md]]`,
+			status: 'pending'		
 		});
 		this.append(content);
 		this.save();
@@ -787,6 +801,7 @@ class QuickNote extends ObsidianNote {
 }
 
 class QuickNoteAssembler {
+	
 	constructor(config) {
 		this._config = config;
 		this._folder = new ObsidianFile({
@@ -795,15 +810,16 @@ class QuickNoteAssembler {
 			filename: ''
 		});
 	}
+	
 	async run() {
-		const paths = this.folder.listFiles();
+		const paths = this._folder.listFiles();
 		if (paths.length === 0) return this;
 		
 		const notes = paths.map(path => {
 			const filename = path.split('/').pop();
 			return new ObsidianNote({
 				bookmark: this._config.bookmark,
-				folder: OBsidianFile.normalizePath(this._config.quick),
+				folder: ObsidianFile.normalizePath(this._config.quick),
 				filename
 			});
 		});
@@ -845,12 +861,69 @@ class QuickNoteAssembler {
 		return groups;
 	}
 	
+	_assembleSection(dailyNote, sectionName, quickNotes) {
+		const headerText = sectionName.replace(/^#+\s*/, '');
+		const allSections = dailyNote.sections.toArray();
+		const targetSection = dailyNote.sections.find(headerText);
+		
+		
+		// get existing H4 entries as strings
+		const existingEntries = targetSection
+			? targetSection.getSubsections(allSections).map(s => s.toString())
+			: [];
+		
+		// get incoming entries from quick note bodies
+		const incoming = quickNotes.map(qn => {
+			const sections = qn.sections.toArray();
+			return sections.length > 0 ? sections[0].toString() : null;
+		}).filter(e => e);
+		
+		// merge and dedup by full content
+		const merged = [...existingEntries];
+		for (const entry of incoming) {
+			if (!merged.includes(entry)) merged.push(entry);
+		}
+		
+		// sort by timestamp first, then alphabetically
+		merged.sort((a,b) => {
+			const timeA = DateFormatter.parseHeaderTime(a);
+			const timeB = DateFormatter.parseHeaderTime(b);
+			if (timeA !== null && timeB !== null) return timeA - timeB;
+			if (timeA !== null) return -1;
+			if (timeB !== null) return 1;
+			return a.localeCompare(b);
+		});
+
+		if (targetSection) {
+    			// Remove existing H4 subsections from _sections array
+    			const subsections = targetSection.getSubsections(allSections);
+    			for (const sub of subsections) {
+        			dailyNote.sections.remove(sub);
+    			}
+    			targetSection.content = merged.join(ObsidianFile.newline);
+		}
+
+						
+		if (targetSection) {
+			targetSection.content = merged.join(ObsidianFile.newline);
+		} else {
+			dailyNote.sections.add(headerText, merged.join(ObsidianFile.newline), 2);
+		}
+		
+		dailyNote.save();
+		
+		// mark quick notes complete after successful save
+		for (const qn of quickNotes) {
+			qn.setFrontMatterProperty('status', 'complete');
+			qn.save();
+		} 
+	}
+	
 	async _assembleGroup(dailyNoteRef, quickNotes) {
 		const date = dailyNoteRef.replace(/[\[\]"]/g, '').replace('.md', '');
-		
 		const dailyNote = new DailyNote({
-			config: this._config,
-			date: new Date(date)
+    			config: this._config,
+    			date: new Date(date + 'T00:00:00')
 		});
 		
 		if (!dailyNote.exists()) {
@@ -862,10 +935,13 @@ class QuickNoteAssembler {
 		// Group quick notes by section
 		const bySectionName = {};
 		for (const qn of quickNotes) {
-			const type = qn.fontMatter.get('type');
+			const type = qn.frontMatter.get('type');
 			
 			if (type === 'tracker') {
-				const emoji = qn.read.split('\n').find(l => l.trim());
+				const emoji = qn.read()
+    					.split('\n')
+    					.filter(l => l.trim() && l.trim() !== '---')
+    					.find(l => !l.includes(':'));
 				dailyNote.addTracker(emoji);
 				qn.setFrontMatterProperty('status', 'complete');
 				qn.save();
@@ -1564,14 +1640,24 @@ if (typeof args !== 'undefined' && args.shortcutParameter) {
     const input = args.shortcutParameter || {};
 
     (async () => {
-        if (input.type === "setup") {
-			ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
+		
+		const done = () => {
 			Script.setShortcutOutput("OK");
 			Script.complete();
-			return;
+		};
+		
+        if (input.type === "setup") {
+			ObsidianConfig.setup(input.scriptableBookmark, input.configPath);
+			return done();
 		}
 		
         const config = ObsidianConfig.load();
+		
+		if (input.type === "assemble") {
+			await new QuickNoteAssembler(config).run();
+			return done();
+		}
+		
 		const payload = { config };
 		payload[input.type] = input;
 		
@@ -1581,8 +1667,7 @@ if (typeof args !== 'undefined' && args.shortcutParameter) {
 			await new DailyNote(payload).run();
 		}
 		
-		Script.setShortcutOutput("OK");
-    		Script.complete();
+		done();
     })();
 }
 
