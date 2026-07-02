@@ -1637,6 +1637,7 @@ module.exports = ObsidianJS;
 // Runner - only executes when called directly from 
 // Shortcuts via Scriptable
 if (typeof args !== 'undefined' && args.shortcutParameter) {
+	
     const input = args.shortcutParameter || {};
 
     (async () => {
