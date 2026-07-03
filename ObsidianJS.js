@@ -1626,6 +1626,7 @@ const ObsidianJS = {
 	FrontMatter: FrontMatter,
 	Note: ObsidianNote,
 	QuickNote: QuickNote,
+	QuickNoteAssembler: QuickNoteAssembler,
 	Section: Section,
 	Sections: Sections,
 	Tags: Tags,
