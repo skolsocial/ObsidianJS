@@ -1130,11 +1130,19 @@ class EntryLocation {
 		return `[${this.label}](geo:${this.latitude},${this.longitude})`;
 	}
 
-	static async current() {
-		const loc = await Location.current();
-		const geo = await Location.reverseGeocode(loc.latitude, loc.longitude);
-		const place = geo[0] || {};
-		return new EntryLocation({
+static async current(accuracy = 'tenMeters') {
+    const accuracyMap = {
+        'best':             () => Location.setAccuracyToBest(),
+        'tenMeters':        () => Location.setAccuracyToTenMeters(),
+        'hundredMeters':    () => Location.setAccuracyToHundredMeters(),
+        'threeKilometers':  () => Location.setAccuracyToThreeKilometers()
+    };
+    const setAccuracy = accuracyMap[accuracy];
+    if (setAccuracy) setAccuracy();
+    	const loc = await Location.current();
+	const geo = await Location.reverseGeocode(loc.latitude, loc.longitude);
+	const place = geo[0] || {};
+	return new EntryLocation({
 			latitude: loc.latitude,
 			longitude: loc.longitude,
 			altitude: loc.altitude,
